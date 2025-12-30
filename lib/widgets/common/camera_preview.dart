@@ -408,7 +408,7 @@ class _CameraPreviewWidgetState extends ConsumerState<CameraPreviewWidget>
             Positioned(
               top: AppConstants.spacingMd,
               right: AppConstants.spacingMd,
-              _buildFpsIndicator(cameraService.currentFps),
+              child: _buildFpsIndicator(cameraService.currentFps),
             ),
 
           // Controls overlay

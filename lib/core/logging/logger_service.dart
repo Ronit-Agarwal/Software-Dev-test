@@ -221,7 +221,9 @@ class PerformanceTrace {
   final Stopwatch _stopwatch;
   final Map<String, dynamic> _metrics;
 
-  PerformanceTrace(this._operation) : _stopwatch = Stopwatch();
+  PerformanceTrace(this._operation)
+      : _stopwatch = Stopwatch(),
+        _metrics = <String, dynamic>{};
 
   /// Starts the trace.
   void start() {
@@ -344,6 +346,5 @@ class AnalyticsEvent {
   /// Logs a screen view.
   static void logScreenView(String screenName) {
     log('screen_view', parameters: {'screen': screenName});
-    GlobalErrorHandler.addBreadcrumb('navigation', 'Viewed $screenName');
   }
 }

@@ -1,3 +1,6 @@
+import 'package:camera/camera.dart' show ResolutionPreset;
+import 'package:flutter/material.dart';
+
 /// Global constants used throughout the app.
 ///
 /// This file contains all hardcoded values to ensure consistency
@@ -144,15 +147,6 @@ class NavIndices {
   static const int detection = 1;
   static const int sound = 2;
   static const int chat = 3;
-}
-
-/// Camera resolution presets.
-enum ResolutionPreset {
-  low,
-  medium,
-  high,
-  veryHigh,
-  ultraHigh,
 }
 
 /// Session timeout settings.

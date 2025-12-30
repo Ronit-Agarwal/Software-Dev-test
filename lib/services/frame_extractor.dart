@@ -48,7 +48,7 @@ class FrameExtractor with ChangeNotifier {
   int _processingStartTime = 0;
 
   // Circular buffer for temporal analysis
-  final FrameBuffer _frameBuffer;
+  late FrameBuffer _frameBuffer;
 
   // Isolate for heavy processing
   Isolate? _processingIsolate;
@@ -81,8 +81,9 @@ class FrameExtractor with ChangeNotifier {
     void Function(FramePerformanceMetrics metrics)? onPerformanceUpdate,
   })  : _config = config,
         _onFrame = onFrame,
-        _onPerformanceUpdate = onPerformanceUpdate,
-        _frameBuffer = FrameBuffer(capacity: config.maxBufferSize);
+        _onPerformanceUpdate = onPerformanceUpdate {
+    _frameBuffer = FrameBuffer(capacity: config.maxBufferSize);
+  }
 
   /// Updates the frame extractor configuration.
   void updateConfig(FrameExtractorConfig newConfig) {
@@ -90,9 +91,11 @@ class FrameExtractor with ChangeNotifier {
       LoggerService.warn('Cannot update config while frame extractor is running');
       return;
     }
+
     _config = newConfig;
-    _frameBuffer.clear();
-    _frameBuffer._capacity = newConfig.maxBufferSize;
+    _frameBuffer.dispose();
+    _frameBuffer = FrameBuffer(capacity: newConfig.maxBufferSize);
+
     notifyListeners();
   }
 
@@ -213,6 +216,7 @@ class FrameExtractor with ChangeNotifier {
     // Store the latest frame (Dart is single-threaded, so no locks needed)
     _latestFrame = image;
 
+    // We only keep a reference; the frame callback should be fast.
     if (_latestFrame == null) return;
 
     // Check if we should skip this frame for performance
@@ -222,16 +226,13 @@ class FrameExtractor with ChangeNotifier {
       return;
     }
 
-    // Calculate processing latency
-    final processingLatency = _processingStartTime > 0
-        ? DateTime.now().millisecondsSinceEpoch - _processingStartTime
-        : 0;
+    _processingStartTime = DateTime.now().millisecondsSinceEpoch;
 
     // Create CameraFrame
     final cameraFrame = CameraFrame.fromCameraImage(
-      frameToProcess,
+      _latestFrame!,
       sequenceNumber: sequenceNumber,
-      processingLatencyMs: processingLatency,
+      processingLatencyMs: 0,
     );
 
     // Add to buffer

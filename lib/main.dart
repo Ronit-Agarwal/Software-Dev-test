@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -6,7 +7,8 @@ import 'package:signsync/core/logging/logger_service.dart';
 import 'package:signsync/core/navigation/app_router.dart';
 import 'package:signsync/core/theme/app_theme.dart';
 import 'package:signsync/config/providers.dart';
-import 'package:signsync/config/app_config.dart';
+import 'package:signsync/config/app_config.dart' hide appConfigProvider;
+import 'package:signsync/utils/constants.dart';
 
 /// Main entry point for the SignSync application.
 ///
@@ -67,8 +69,8 @@ class SignSyncApp extends ConsumerWidget {
 
     return MaterialApp.router(
       // App configuration
-      title: AppConfig.appName,
-      debugShowCheckedModeBanner: AppConfig.isDebugMode,
+      title: AppConstants.appName,
+      debugShowCheckedModeBanner: kDebugMode,
 
       // Theme configuration
       theme: AppTheme.lightTheme,
@@ -81,7 +83,7 @@ class SignSyncApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: AppConfig.supportedLocales,
+      supportedLocales: AppLocales.supported,
 
       // Routing
       routerConfig: router,

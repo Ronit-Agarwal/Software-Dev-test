@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:signsync/config/app_config.dart';
+import 'package:signsync/config/app_config.dart' hide appConfigProvider;
 import 'package:signsync/config/providers.dart';
 import 'package:signsync/core/logging/logger_service.dart';
 import 'package:signsync/core/theme/app_theme.dart';
