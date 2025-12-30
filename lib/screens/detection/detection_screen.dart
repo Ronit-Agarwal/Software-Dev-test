@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:signsync/config/providers.dart';
+import 'package:signsync/models/camera_state.dart';
 import 'package:signsync/models/detected_object.dart';
 import 'package:signsync/services/camera_service.dart';
 import 'package:signsync/services/ml_inference_service.dart';
@@ -52,12 +53,25 @@ class _DetectionScreenState extends ConsumerState<DetectionScreen> {
 
     try {
       final cameraService = ref.read(cameraServiceProvider);
-      await cameraService.startCamera();
+
+      // Initialize camera service if not already done
+      if (!cameraService.isInitialized) {
+        await cameraService.initialize();
+      }
+
+      // Start camera if not already running
+      if (cameraService.state != CameraState.ready &&
+          cameraService.state != CameraState.streaming) {
+        await cameraService.startCamera();
+      }
 
       final mlService = ref.read(mlInferenceServiceProvider);
       await mlService.switchMode(AppMode.detection);
 
-      await cameraService.startStreaming(onFrame: _processFrame);
+      // Start streaming for ML inference
+      if (cameraService.state != CameraState.streaming) {
+        await cameraService.startStreaming(onFrame: _processFrame);
+      }
 
       LoggerService.info('Object detection started');
     } catch (e, stack) {
