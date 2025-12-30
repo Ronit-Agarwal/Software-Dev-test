@@ -5,7 +5,9 @@ import 'package:signsync/core/navigation/app_router.dart';
 import 'package:signsync/core/theme/app_theme.dart';
 import 'package:signsync/services/permissions_service.dart';
 import 'package:signsync/models/app_mode.dart';
+import 'package:signsync/models/camera_state.dart';
 import 'package:signsync/services/camera_service.dart';
+import 'package:signsync/services/frame_extractor.dart';
 import 'package:signsync/services/ml_inference_service.dart';
 
 /// Root provider for the application configuration.
@@ -29,6 +31,51 @@ final cameraServiceProvider = ChangeNotifierProvider<CameraService>((ref) {
   return CameraService();
 });
 
+/// Provider for frame extractor service.
+final frameExtractorProvider = ChangeNotifierProvider<FrameExtractor>((ref) {
+  final cameraService = ref.watch(cameraServiceProvider);
+
+  return FrameExtractor(
+    onFrame: (frame) {
+      // Frames are processed and added to the buffer
+      // ML inference will consume from this buffer
+    },
+    onPerformanceUpdate: (metrics) {
+      // Handle performance updates
+    },
+  );
+});
+
+/// Provider for camera initialization state.
+final cameraInitializedProvider = Provider<bool>((ref) {
+  final cameraService = ref.watch(cameraServiceProvider);
+  return cameraService.isInitialized;
+});
+
+/// Provider for camera streaming state.
+final cameraStreamingProvider = Provider<bool>((ref) {
+  final cameraService = ref.watch(cameraServiceProvider);
+  return cameraService.isStreaming;
+});
+
+/// Provider for camera state.
+final cameraStateProvider = Provider<CameraState>((ref) {
+  final cameraService = ref.watch(cameraServiceProvider);
+  return cameraService.state;
+});
+
+/// Provider for camera FPS.
+final cameraFpsProvider = Provider<double>((ref) {
+  final cameraService = ref.watch(cameraServiceProvider);
+  return cameraService.currentFps;
+});
+
+/// Provider for frame extractor performance metrics.
+final framePerformanceProvider = Provider<FramePerformanceMetrics>((ref) {
+  final frameExtractor = ref.watch(frameExtractorProvider);
+  return frameExtractor.performanceMetrics;
+});
+
 /// Provider for ML inference service.
 final mlInferenceServiceProvider = ChangeNotifierProvider<MlInferenceService>((ref) {
   return MlInferenceService();
@@ -37,12 +84,6 @@ final mlInferenceServiceProvider = ChangeNotifierProvider<MlInferenceService>((r
 /// Provider for the current app mode.
 final appModeProvider = StateProvider<AppMode>((_) {
   return AppMode.translation;
-});
-
-/// Provider for camera initialization state.
-final cameraInitializedProvider = Provider<bool>((ref) {
-  final cameraService = ref.watch(cameraServiceProvider);
-  return cameraService.isInitialized;
 });
 
 /// Provider for the latest inference result.

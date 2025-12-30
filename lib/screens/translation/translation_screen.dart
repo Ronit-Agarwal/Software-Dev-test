@@ -1,7 +1,9 @@
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:signsync/config/providers.dart';
 import 'package:signsync/models/asl_sign.dart';
+import 'package:signsync/models/camera_state.dart';
 import 'package:signsync/services/permissions_service.dart';
 import 'package:signsync/core/logging/logger_service.dart';
 import 'package:signsync/core/theme/colors.dart';
@@ -72,10 +74,23 @@ class _TranslationScreenState extends ConsumerState<TranslationScreen>
     AnalyticsEvent.logTranslationStarted();
 
     try {
-      // Start camera and ML inference
       final cameraService = ref.read(cameraServiceProvider);
-      await cameraService.startCamera();
-      await cameraService.startStreaming(onFrame: _processFrame);
+
+      // Initialize camera service if not already done
+      if (!cameraService.isInitialized) {
+        await cameraService.initialize();
+      }
+
+      // Start camera if not already running
+      if (cameraService.state != CameraState.ready &&
+          cameraService.state != CameraState.streaming) {
+        await cameraService.startCamera();
+      }
+
+      // Start streaming for ML inference
+      if (cameraService.state != CameraState.streaming) {
+        await cameraService.startStreaming(onFrame: _processFrame);
+      }
 
       LoggerService.info('ASL translation started');
     } catch (e, stack) {
