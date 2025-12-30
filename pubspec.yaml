@@ -1,0 +1,109 @@
+name: signsync
+description: Production-grade Flutter app for ASL sign language translation, object detection, and sound alerts.
+
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: '>=3.10.0'
+
+dependencies:
+  # Core Flutter
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State Management - Riverpod
+  flutter_riverpod: ^2.4.0
+  riverpod_annotation: ^2.3.0
+  riverpod_generator: ^2.3.0
+
+  # Navigation
+  go_router: ^12.0.0
+
+  # Firebase
+  firebase_core: ^2.24.0
+  firebase_analytics: ^10.8.0
+
+  # Error Tracking & Logging
+  sentry_flutter: ^7.13.0
+  logger: ^2.0.0
+
+  # Camera & ML
+  camera: ^0.10.5
+  google_mlkit_image_labeling: ^0.11.0
+  google_mlkit_pose_detection: ^0.11.0
+  tflite_flutter: ^0.10.1
+
+  # Audio
+  sound_stream: ^0.3.0
+  flutter_sound: ^9.2.13
+
+  # Platform Services
+  permission_handler: ^11.1.0
+  path_provider: ^2.1.1
+  device_info_plus: ^9.1.0
+  package_info_plus: ^5.0.1
+
+  # Utilities
+  shared_preferences: ^2.2.2
+  intl: ^0.18.1
+  connectivity_plus: ^5.0.2
+  url_launcher: ^6.2.0
+  uuid: ^4.2.1
+  equatable: ^2.0.5
+  freezed_annotation: ^2.4.1
+  json_annotation: ^4.8.1
+
+  # UI & Design
+  gap: ^3.0.1
+  shimmer: ^3.0.0
+  flutter_markdown: ^0.6.18
+
+  # Accessibility
+  talker: ^3.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+
+  # Code Generation
+  build_runner: ^2.4.6
+  riverpod_generator: ^2.3.0
+  freezed: ^2.4.5
+  json_serializable: ^6.7.1
+
+  # Testing
+  integration_test:
+    sdk: flutter
+  mockito: ^5.4.2
+  fake_cloud_firestore: ^2.5.0
+  firebase_auth_mocks: ^0.13.0
+
+flutter:
+  uses-material-design: true
+
+  fonts:
+    - family: SignSyncIcons
+      fonts:
+        - asset: assets/icons/SignSyncIcons.ttf
+
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700
+
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/models/

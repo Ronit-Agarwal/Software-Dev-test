@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- App name -->
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>SignSync</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>signsync</string>
+	<key>CFBundlePackageType</key>
+	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+
+	<!-- Camera Permission -->
+	<key>NSCameraUsageDescription</key>
+	<string>SignSync needs camera access to detect ASL signs and identify objects in your surroundings. The camera feed is processed locally on your device and is never stored or transmitted.</string>
+
+	<!-- Microphone Permission -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>SignSync needs microphone access to detect important sounds and alert you. Audio is processed locally and only significant sounds will trigger notifications.</string>
+
+	<!-- Photo Library Permission -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>SignSync needs photo library access to save and import images for sign detection and object recognition.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>SignSync needs permission to save images to your photo library.</string>
+
+	<!-- Speech Recognition (for future voice features) -->
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>SignSync uses speech recognition to provide additional communication options.</string>
+
+	<!-- Local notifications -->
+	<key>NSUserNotificationUsageDescription</key>
+	<string>SignSync sends notifications for important sounds detected when the app is in the background.</string>
+
+	<!-- App Transport Security -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+
+	<!-- Supported interface orientations -->
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+
+	<!-- Enable accessibility features -->
+	<key>UIAccessibility</key>
+	<true/>
+	<key>UIRequiresFullScreen</key>
+	<false/>
+
+	<!-- Firebase configuration (placeholder) -->
+	<key>FirebaseAppDelegateProxyEnabled</key>
+	<false/>
+
+	<!-- Background modes -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+		<string>processing</string>
+	</array>
+</dict>
+</plist>

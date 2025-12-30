@@ -1,0 +1,51 @@
+# This file stores configuration for Dart code analysis tools.
+# It's used by 'dart analyze', 'flutter analyze', and IDEs.
+
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "lib/config/constants.dart"
+
+  errors:
+    unused_import: warning
+    unused_local_variable: warning
+    missing_required_param: error
+    missing_return: error
+    todo: warning
+
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+
+linter:
+  rules:
+    # Style rules
+    - prefer_relative_imports
+    - prefer_single_quotes
+    - prefer_final_locals
+    - prefer_final_in_for_each
+    - prefer_const_constructors
+    - prefer_const_declarations
+    - sort_constructors_first
+
+    # Error prevention
+    - avoid_empty_else
+    - avoid_print
+    - no_duplicate_case_values
+    - use_string_in_part_of_urls
+
+    # Conventions
+    - package_api_docs
+    - public_member_api_docs
+    - sort_pub_dependencies
+    - sort_constructors_first
+
+    # Best practices
+    - use_build_context_synchronously
+    - avoid_function_literals_in_foreach_calls
+    - avoid_renaming_method_parameters
+    - flutter_style_todos

@@ -1,0 +1,91 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:signsync/config/app_config.dart';
+import 'package:signsync/core/navigation/app_router.dart';
+import 'package:signsync/core/theme/app_theme.dart';
+import 'package:signsync/services/permissions_service.dart';
+import 'package:signsync/models/app_mode.dart';
+import 'package:signsync/services/camera_service.dart';
+import 'package:signsync/services/ml_inference_service.dart';
+
+/// Root provider for the application configuration.
+final appConfigProvider = ChangeNotifierProvider<AppConfig>((ref) {
+  return AppConfig();
+});
+
+/// Provider for the GoRouter instance.
+final routerProvider = Provider<GoRouter>((ref) {
+  final appConfig = ref.watch(appConfigProvider);
+  return AppRouter.createRouter(appConfig);
+});
+
+/// Provider for permissions service.
+final permissionsServiceProvider = Provider<PermissionsService>((_) {
+  return PermissionsService();
+});
+
+/// Provider for camera service.
+final cameraServiceProvider = ChangeNotifierProvider<CameraService>((ref) {
+  return CameraService();
+});
+
+/// Provider for ML inference service.
+final mlInferenceServiceProvider = ChangeNotifierProvider<MlInferenceService>((ref) {
+  return MlInferenceService();
+});
+
+/// Provider for the current app mode.
+final appModeProvider = StateProvider<AppMode>((_) {
+  return AppMode.translation;
+});
+
+/// Provider for camera initialization state.
+final cameraInitializedProvider = Provider<bool>((ref) {
+  final cameraService = ref.watch(cameraServiceProvider);
+  return cameraService.isInitialized;
+});
+
+/// Provider for the latest inference result.
+final inferenceResultProvider = Provider<InferenceResult?>((ref) {
+  final mlService = ref.watch(mlInferenceServiceProvider);
+  return mlService.latestResult;
+});
+
+/// Provider for permission status.
+final permissionStatusProvider = Provider<PermissionStatus>((ref) {
+  final permissionsService = ref.watch(permissionsServiceProvider);
+  return permissionsService.overallStatus;
+});
+
+/// Provider for checking if all required permissions are granted.
+final allPermissionsGrantedProvider = Provider<bool>((ref) {
+  final permissionsService = ref.watch(permissionsServiceProvider);
+  return permissionsService.allPermissionsGranted;
+});
+
+/// Provider for high contrast mode.
+final highContrastModeProvider = Provider<bool>((ref) {
+  final config = ref.watch(appConfigProvider);
+  return config.highContrastMode;
+});
+
+/// Provider for theme data based on current settings.
+final themeDataProvider = Provider<ThemeData>((ref) {
+  final config = ref.watch(appConfigProvider);
+  final isHighContrast = config.highContrastMode;
+
+  if (isHighContrast) {
+    return config.themeMode == ThemeMode.dark
+        ? AppTheme.highContrastDarkTheme
+        : AppTheme.highContrastLightTheme;
+  }
+
+  switch (config.themeMode) {
+    case ThemeMode.light:
+      return AppTheme.lightTheme;
+    case ThemeMode.dark:
+      return AppTheme.darkTheme;
+    case ThemeMode.system:
+      return AppTheme.lightTheme;
+  }
+});
