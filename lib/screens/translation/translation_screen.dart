@@ -2,8 +2,10 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:signsync/config/providers.dart';
+import 'package:signsync/models/app_mode.dart';
 import 'package:signsync/models/asl_sign.dart';
 import 'package:signsync/models/camera_state.dart';
+import 'package:signsync/models/cnn_inference.dart';
 import 'package:signsync/services/permissions_service.dart';
 import 'package:signsync/core/logging/logger_service.dart';
 import 'package:signsync/core/theme/colors.dart';
@@ -26,6 +28,7 @@ class _TranslationScreenState extends ConsumerState<TranslationScreen>
     with TickerProviderStateMixin {
   bool _isProcessing = false;
   AslSign? _currentSign;
+  AslCnnResult? _currentCnnResult;
   final List<AslSign> _signHistory = [];
   final TextEditingController _manualInputController = TextEditingController();
 
@@ -44,6 +47,38 @@ class _TranslationScreenState extends ConsumerState<TranslationScreen>
     );
 
     _checkPermissions();
+
+    ref.listen<InferenceResult?>(inferenceResultProvider, (previous, next) {
+      if (!mounted) return;
+
+      final data = next?.data;
+      if (data is AslCnnResult) {
+        final sign = data.sign;
+
+        // The ML service already applies thresholding + smoothing; we still keep
+        // a small guard to avoid spamming the UI/history.
+        if (sign.confidence >= 0.85) {
+          setState(() {
+            _currentCnnResult = data;
+            _currentSign = sign;
+
+            final shouldAppend = _signHistory.isEmpty || _signHistory.first.id != sign.id;
+            if (shouldAppend) {
+              _signHistory.insert(0, sign);
+              if (_signHistory.length > AppConstants.maxSignHistory) {
+                _signHistory.removeLast();
+              }
+            }
+          });
+        }
+      } else {
+        setState(() {
+          _currentCnnResult = null;
+          _currentSign = null;
+        });
+      }
+    });
+
     LoggerService.info('Translation screen initialized');
   }
 
@@ -87,16 +122,20 @@ class _TranslationScreenState extends ConsumerState<TranslationScreen>
         await cameraService.startCamera();
       }
 
+      final mlService = ref.read(mlInferenceServiceProvider);
+      await mlService.switchMode(AppMode.translation);
+      await mlService.initialize(mode: AppMode.translation);
+
       // Start streaming for ML inference
       if (cameraService.state != CameraState.streaming) {
-        await cameraService.startStreaming(onFrame: _processFrame);
+        await cameraService.startStreaming(onFrame: _onCameraFrame);
       }
 
       LoggerService.info('ASL translation started');
     } catch (e, stack) {
       LoggerService.error('Failed to start translation', error: e, stack: stack);
       setState(() => _isProcessing = false);
-      _showError('Failed to start camera: $e');
+      _showError('Failed to start translation: $e');
     }
   }
 
@@ -111,27 +150,21 @@ class _TranslationScreenState extends ConsumerState<TranslationScreen>
     setState(() => _isProcessing = false);
   }
 
-  void _processFrame(dynamic image) async {
+  void _onCameraFrame(CameraImage image) {
     if (!_isProcessing) return;
 
     try {
+      final cameraService = ref.read(cameraServiceProvider);
       final mlService = ref.read(mlInferenceServiceProvider);
-      final result = await mlService.processImage(image);
 
-      if (result is InferenceResult && result.data is AslSign) {
-        final sign = result.data as AslSign;
-        if (sign.confidence >= 0.6) {
-          setState(() {
-            _currentSign = sign;
-            _signHistory.insert(0, sign);
-            if (_signHistory.length > AppConstants.maxSignHistory) {
-              _signHistory.removeLast();
-            }
-          });
-        }
-      }
+      final isFront = cameraService.selectedCamera?.lensDirection == CameraLensDirection.front;
+      mlService.submitCameraFrame(
+        image,
+        rotationDegrees: cameraService.rotationDegrees,
+        mirror: isFront,
+      );
     } catch (e) {
-      LoggerService.debug('Frame processing error: $e');
+      LoggerService.debug('Frame enqueue error: $e');
     }
   }
 
@@ -200,6 +233,7 @@ class _TranslationScreenState extends ConsumerState<TranslationScreen>
             flex: 2,
             child: TranslationDisplayWidget(
               currentSign: _currentSign,
+              cnnResult: _currentCnnResult,
               signHistory: _signHistory,
             ),
           ),

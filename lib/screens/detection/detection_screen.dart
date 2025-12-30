@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:signsync/config/providers.dart';
+import 'package:signsync/models/app_mode.dart';
 import 'package:signsync/models/camera_state.dart';
 import 'package:signsync/models/detected_object.dart';
 import 'package:signsync/services/camera_service.dart';

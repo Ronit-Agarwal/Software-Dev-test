@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "description": "Sample SignSync ASL dictionary. Replace/update this file to match the trained model's class order.",
+  "classes": [
+    {"index": 0, "label": "A", "word": "A", "category": "letter", "description": "Fingerspelling: A", "synonyms": ["a"], "phonetic": "ay"},
+    {"index": 1, "label": "B", "word": "B", "category": "letter", "description": "Fingerspelling: B", "synonyms": ["b"], "phonetic": "bee"},
+    {"index": 2, "label": "C", "word": "C", "category": "letter", "description": "Fingerspelling: C", "synonyms": ["c"], "phonetic": "see"},
+    {"index": 3, "label": "D", "word": "D", "category": "letter", "description": "Fingerspelling: D", "synonyms": ["d"], "phonetic": "dee"},
+    {"index": 4, "label": "E", "word": "E", "category": "letter", "description": "Fingerspelling: E", "synonyms": ["e"], "phonetic": "ee"},
+    {"index": 5, "label": "F", "word": "F", "category": "letter", "description": "Fingerspelling: F", "synonyms": ["f"], "phonetic": "ef"},
+    {"index": 6, "label": "G", "word": "G", "category": "letter", "description": "Fingerspelling: G", "synonyms": ["g"], "phonetic": "jee"},
+    {"index": 7, "label": "H", "word": "H", "category": "letter", "description": "Fingerspelling: H", "synonyms": ["h"], "phonetic": "aitch"},
+    {"index": 8, "label": "I", "word": "I", "category": "letter", "description": "Fingerspelling: I", "synonyms": ["i"], "phonetic": "eye"},
+    {"index": 9, "label": "J", "word": "J", "category": "letter", "description": "Fingerspelling: J", "synonyms": ["j"], "phonetic": "jay"},
+    {"index": 10, "label": "K", "word": "K", "category": "letter", "description": "Fingerspelling: K", "synonyms": ["k"], "phonetic": "kay"},
+    {"index": 11, "label": "L", "word": "L", "category": "letter", "description": "Fingerspelling: L", "synonyms": ["l"], "phonetic": "el"},
+    {"index": 12, "label": "M", "word": "M", "category": "letter", "description": "Fingerspelling: M", "synonyms": ["m"], "phonetic": "em"},
+    {"index": 13, "label": "N", "word": "N", "category": "letter", "description": "Fingerspelling: N", "synonyms": ["n"], "phonetic": "en"},
+    {"index": 14, "label": "O", "word": "O", "category": "letter", "description": "Fingerspelling: O", "synonyms": ["o"], "phonetic": "oh"},
+    {"index": 15, "label": "P", "word": "P", "category": "letter", "description": "Fingerspelling: P", "synonyms": ["p"], "phonetic": "pee"},
+    {"index": 16, "label": "Q", "word": "Q", "category": "letter", "description": "Fingerspelling: Q", "synonyms": ["q"], "phonetic": "cue"},
+    {"index": 17, "label": "R", "word": "R", "category": "letter", "description": "Fingerspelling: R", "synonyms": ["r"], "phonetic": "ar"},
+    {"index": 18, "label": "S", "word": "S", "category": "letter", "description": "Fingerspelling: S", "synonyms": ["s"], "phonetic": "ess"},
+    {"index": 19, "label": "T", "word": "T", "category": "letter", "description": "Fingerspelling: T", "synonyms": ["t"], "phonetic": "tee"},
+    {"index": 20, "label": "U", "word": "U", "category": "letter", "description": "Fingerspelling: U", "synonyms": ["u"], "phonetic": "you"},
+    {"index": 21, "label": "V", "word": "V", "category": "letter", "description": "Fingerspelling: V", "synonyms": ["v"], "phonetic": "vee"},
+    {"index": 22, "label": "W", "word": "W", "category": "letter", "description": "Fingerspelling: W", "synonyms": ["w"], "phonetic": "double you"},
+    {"index": 23, "label": "X", "word": "X", "category": "letter", "description": "Fingerspelling: X", "synonyms": ["x"], "phonetic": "ex"},
+    {"index": 24, "label": "Y", "word": "Y", "category": "letter", "description": "Fingerspelling: Y", "synonyms": ["y"], "phonetic": "why"},
+    {"index": 25, "label": "Z", "word": "Z", "category": "letter", "description": "Fingerspelling: Z", "synonyms": ["z"], "phonetic": "zee"},
+
+    {"index": 26, "label": "hello", "word": "hello", "category": "word", "description": "Common greeting", "synonyms": ["hi", "hey"], "phonetic": "heh-loh"},
+    {"index": 27, "label": "thank you", "word": "thank you", "category": "phrase", "description": "Expression of thanks", "synonyms": ["thanks", "thankyou"], "phonetic": "thangk-yoo"},
+    {"index": 28, "label": "please", "word": "please", "category": "word", "description": "Polite request", "synonyms": ["pls"], "phonetic": "pleez"}
+  ]
+}

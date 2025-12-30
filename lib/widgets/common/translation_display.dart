@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:signsync/models/asl_sign.dart';
+import 'package:signsync/models/cnn_inference.dart';
 import 'package:signsync/core/theme/colors.dart';
 import 'package:signsync/utils/constants.dart';
+import 'package:signsync/utils/extensions.dart';
 
 /// Translation display widget for showing ASL sign detection results.
 ///
@@ -10,11 +12,13 @@ import 'package:signsync/utils/constants.dart';
 /// and the history of recent signs.
 class TranslationDisplayWidget extends ConsumerWidget {
   final AslSign? currentSign;
+  final AslCnnResult? cnnResult;
   final List<AslSign> signHistory;
 
   const TranslationDisplayWidget({
     super.key,
     this.currentSign,
+    this.cnnResult,
     required this.signHistory,
   });
 
@@ -38,7 +42,7 @@ class TranslationDisplayWidget extends ConsumerWidget {
         children: [
           // Current Sign Display
           if (currentSign != null)
-            _buildCurrentSignDisplay(context, currentSign!)
+            _buildCurrentSignDisplay(context, currentSign!, cnnResult)
           else
             _buildNoSignDisplay(context),
 
@@ -46,19 +50,24 @@ class TranslationDisplayWidget extends ConsumerWidget {
 
           // Recent Signs History
           Expanded(
-            child: _buildHistoryList(),
+            child: _buildHistoryList(context),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCurrentSignDisplay(BuildContext context, AslSign sign) {
+  Widget _buildCurrentSignDisplay(
+    BuildContext context,
+    AslSign sign,
+    AslCnnResult? cnnResult,
+  ) {
     final confidenceColor = _getConfidenceColor(sign.confidence);
 
     return Padding(
       padding: const EdgeInsets.all(AppConstants.spacingMd),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Main Display
           Row(
@@ -96,7 +105,15 @@ class TranslationDisplayWidget extends ConsumerWidget {
                       sign.word,
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
-                    if (sign.description.isNotEmpty) ...[
+                    if (cnnResult?.phoneticHint != null && cnnResult!.phoneticHint!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Pronounced: ${cnnResult.phoneticHint}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ] else if (sign.description.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text(
                         sign.description,
@@ -124,11 +141,43 @@ class TranslationDisplayWidget extends ConsumerWidget {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 6),
+                    LinearProgressIndicator(
+                      value: sign.confidence.clamp(0.0, 1.0),
+                      minHeight: 6,
+                      backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+                      valueColor: AlwaysStoppedAnimation<Color>(confidenceColor),
+                    ),
                   ],
                 ),
               ),
             ],
           ),
+          if (cnnResult != null) ...[
+            const SizedBox(height: AppConstants.spacingMd),
+            Text(
+              'Top predictions',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: cnnResult.topK
+                  .map(
+                    (p) => Chip(
+                      label: Text('${p.label} ${(p.confidence * 100).toStringAsFixed(0)}%'),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Latency: ${cnnResult.latency.totalMs}ms (pre: ${cnnResult.latency.preprocessMs}ms, infer: ${cnnResult.latency.inferenceMs}ms)',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
         ],
       ),
     );
@@ -159,7 +208,7 @@ class TranslationDisplayWidget extends ConsumerWidget {
     );
   }
 
-  Widget _buildHistoryList() {
+  Widget _buildHistoryList(BuildContext context) {
     return signHistory.isEmpty
         ? Center(
             child: Text(
@@ -174,12 +223,12 @@ class TranslationDisplayWidget extends ConsumerWidget {
             itemCount: signHistory.length,
             itemBuilder: (context, index) {
               final sign = signHistory[index];
-              return _buildHistoryItem(sign);
+              return _buildHistoryItem(context, sign);
             },
           );
   }
 
-  Widget _buildHistoryItem(AslSign sign) {
+  Widget _buildHistoryItem(BuildContext context, AslSign sign) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppConstants.spacingXs),
       child: Row(

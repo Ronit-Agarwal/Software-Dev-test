@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
-import 'package:camera/camera.dart';
+import 'package:camera/camera.dart' hide CameraException;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:signsync/core/error/exceptions.dart';
@@ -57,7 +57,7 @@ class CameraService with ChangeNotifier {
   bool get isStreaming => _state == CameraState.streaming;
   bool get isCameraEnabled => _cameraEnabled;
   double get currentFps => _currentFps;
-  bool get hasFlash => _controller?.value.flashMode != null;
+  bool get hasFlash => _controller?.value.flashAvailable ?? false;
   bool get isFlashOn => _isFlashOn;
 
   /// Creates a new CameraService instance.
@@ -407,16 +407,16 @@ class CameraService with ChangeNotifier {
   }
 
   /// Cleans up the camera resources.
-  Future<void> dispose() async {
+  @override
+  void dispose() {
     LoggerService.info('Disposing camera service');
     _initTimeout?.cancel();
     _retryTimer?.cancel();
-    await _disposeController();
-    _isInitialized = false;
-    _isStreaming = false;
-    _cameraEnabled = true;
-    _setState(CameraState.disposed);
-    notifyListeners();
+
+    unawaited(_disposeController());
+    _state = CameraState.disposed;
+
+    super.dispose();
   }
 
   Future<void> _disposeController() async {

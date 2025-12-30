@@ -16,7 +16,7 @@ abstract class SignSyncException implements Exception {
   });
 
   @override
-  String toString() => 'SignSyncException [$code]: $message';
+  String toString() => 'SignSyncException${code != null ? ' [$code]' : ''}: $message';
 }
 
 /// Exception thrown when a permission is denied or not granted.
@@ -30,14 +30,14 @@ class PermissionException extends SignSyncException {
     dynamic originalError,
     StackTrace? stackTrace,
   }) : super(
-          message,
+          message: message,
           code: code ?? 'PERMISSION_DENIED',
           originalError: originalError,
           stackTrace: stackTrace,
         );
 
   @override
-  String toString() => 'PermissionException [$permissionType]: $message';
+  String toString() => 'PermissionException [$permissionType]${code != null ? ' [$code]' : ''}: $message';
 }
 
 /// Exception thrown when a camera operation fails.
@@ -48,7 +48,7 @@ class CameraException extends SignSyncException {
     dynamic originalError,
     StackTrace? stackTrace,
   }) : super(
-          message,
+          message: message,
           code: code,
           originalError: originalError,
           stackTrace: stackTrace,
@@ -63,7 +63,7 @@ class AudioException extends SignSyncException {
     dynamic originalError,
     StackTrace? stackTrace,
   }) : super(
-          message,
+          message: message,
           code: code ?? 'AUDIO_ERROR',
           originalError: originalError,
           stackTrace: stackTrace,
@@ -78,7 +78,7 @@ class InferenceException extends SignSyncException {
     dynamic originalError,
     StackTrace? stackTrace,
   }) : super(
-          message,
+          message: message,
           code: code ?? 'INFERENCE_ERROR',
           originalError: originalError,
           stackTrace: stackTrace,
@@ -96,7 +96,7 @@ class ApiException extends SignSyncException {
     dynamic originalError,
     StackTrace? stackTrace,
   }) : super(
-          message,
+          message: message,
           code: code ?? 'API_ERROR',
           originalError: originalError,
           stackTrace: stackTrace,
@@ -106,12 +106,11 @@ class ApiException extends SignSyncException {
     return ApiException(
       message: 'HTTP $statusCode: ${_parseErrorBody(body)}',
       statusCode: statusCode,
-      code: 'HTTP_${statusCode}',
+      code: 'HTTP_$statusCode',
     );
   }
 
   static String _parseErrorBody(String body) {
-    // Simple parsing - in production, parse JSON error response
     return body.length > 100 ? '${body.substring(0, 100)}...' : body;
   }
 }
@@ -124,7 +123,7 @@ class NavigationException extends SignSyncException {
     dynamic originalError,
     StackTrace? stackTrace,
   }) : super(
-          message,
+          message: message,
           code: code ?? 'NAVIGATION_ERROR',
           originalError: originalError,
           stackTrace: stackTrace,
@@ -139,7 +138,7 @@ class StateException extends SignSyncException {
     dynamic originalError,
     StackTrace? stackTrace,
   }) : super(
-          message,
+          message: message,
           code: code ?? 'STATE_ERROR',
           originalError: originalError,
           stackTrace: stackTrace,
@@ -157,7 +156,7 @@ class ValidationException extends SignSyncException {
     dynamic originalError,
     StackTrace? stackTrace,
   }) : super(
-          message,
+          message: message,
           code: code ?? 'VALIDATION_ERROR',
           originalError: originalError,
           stackTrace: stackTrace,
@@ -182,7 +181,7 @@ class NotFoundException extends SignSyncException {
     dynamic originalError,
     StackTrace? stackTrace,
   }) : super(
-          '${resourceType.charAt(0).toUpperCase()}${resourceType.substring(1)} not found',
+          message: '${resourceType[0].toUpperCase()}${resourceType.substring(1)} not found',
           code: code ?? 'NOT_FOUND',
           originalError: originalError,
           stackTrace: stackTrace,
@@ -190,26 +189,20 @@ class NotFoundException extends SignSyncException {
 }
 
 /// Exception thrown when an operation times out.
-class TimeoutException extends SignSyncException {
+class OperationTimeoutException extends SignSyncException {
   final Duration? timeoutDuration;
 
-  const TimeoutException({
+  const OperationTimeoutException({
     required String operation,
     this.timeoutDuration,
     String? code,
     dynamic originalError,
     StackTrace? stackTrace,
   }) : super(
-          '$operation timed out${timeoutDuration != null ? ' after ${timeoutDuration!.inSeconds}s' : ''}',
+          message:
+              '$operation timed out${timeoutDuration != null ? ' after ${timeoutDuration!.inSeconds}s' : ''}',
           code: code ?? 'TIMEOUT',
           originalError: originalError,
           stackTrace: stackTrace,
         );
-}
-
-/// Extension to capitalize strings.
-extension _Capitalize on String {
-  String charAt(int index) => this[index];
-  String get first => isEmpty ? '' : this[0];
-  String get substring => this;
 }

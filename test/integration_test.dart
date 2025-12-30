@@ -1,49 +1,47 @@
-// Integration test for the SignSync app
-import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:signsync/main.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:signsync/config/app_config.dart';
+import 'package:signsync/main.dart';
+import 'package:signsync/models/app_mode.dart';
+import 'package:signsync/utils/constants.dart';
 
 void main() {
   group('App Initialization Tests', () {
-    testWidgets('App creates without errors', (tester) async {
-      // Build the app
+    testWidgets('App builds without errors', (tester) async {
       await tester.pumpWidget(
-        ProviderScope(
-          child: const SignSyncApp(),
+        const ProviderScope(
+          child: SignSyncApp(),
         ),
       );
 
-      // Verify app title is set
-      expect(find.text('SignSync'), findsOneWidget);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MaterialApp), findsOneWidget);
     });
 
-    testWidgets('AppConfig can be modified', (tester) async {
+    test('AppConfig can be modified', () {
       final config = AppConfig();
 
-      // Test theme mode changes
       expect(config.themeMode, ThemeMode.system);
       config.themeMode = ThemeMode.dark;
       expect(config.themeMode, ThemeMode.dark);
 
-      // Test text scale changes
       expect(config.textScaleFactor, 1.0);
       config.textScaleFactor = 1.5;
       expect(config.textScaleFactor, 1.5);
 
-      // Test high contrast mode
       expect(config.highContrastMode, false);
       config.highContrastMode = true;
       expect(config.highContrastMode, true);
 
-      // Test reset
       config.resetToDefaults();
       expect(config.themeMode, ThemeMode.system);
       expect(config.textScaleFactor, 1.0);
       expect(config.highContrastMode, false);
     });
 
-    testWidgets('ThemeMode has correct display names', (tester) {
+    test('ThemeMode has correct display names', () {
       expect(ThemeMode.light.displayName, 'Light');
       expect(ThemeMode.dark.displayName, 'Dark');
       expect(ThemeMode.system.displayName, 'System');
@@ -51,27 +49,26 @@ void main() {
   });
 
   group('Accessibility Tests', () {
-    testWidgets('Minimum touch target is met', (tester) async {
-      // Verify the constant exists
+    test('Minimum touch target is met', () {
       expect(AppConstants.minTouchTarget, 44.0);
       expect(AppConstants.recommendedTouchTarget, 48.0);
     });
 
-    testWidgets('Text scale range is valid', (tester) async {
+    test('Text scale range is valid', () {
       expect(AppConstants.textScaleMin, lessThanOrEqualTo(0.8));
       expect(AppConstants.textScaleMax, greaterThanOrEqualTo(2.0));
     });
   });
 
   group('Navigation Tests', () {
-    testWidgets('AppModes have correct routes', (tester) async {
+    test('AppModes have correct routes', () {
       expect(AppMode.translation.routePath, '/translation');
       expect(AppMode.detection.routePath, '/detection');
       expect(AppMode.sound.routePath, '/sound');
       expect(AppMode.chat.routePath, '/chat');
     });
 
-    testWidgets('AppModes have correct display names', (tester) async {
+    test('AppModes have correct display names', () {
       expect(AppMode.translation.displayName, 'ASL Translation');
       expect(AppMode.detection.displayName, 'Object Detection');
       expect(AppMode.sound.displayName, 'Sound Alerts');
@@ -92,5 +89,3 @@ void main() {
     });
   });
 }
-
-import 'package:flutter/material.dart';

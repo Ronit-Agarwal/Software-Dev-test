@@ -1,9 +1,10 @@
-// SignSync Test Suite
+import 'dart:ui';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:signsync/models/app_mode.dart';
 import 'package:signsync/models/asl_sign.dart';
 import 'package:signsync/models/detected_object.dart';
 import 'package:signsync/models/noise_event.dart';
-import 'package:signsync/models/app_mode.dart';
 
 void main() {
   group('AslSign Model Tests', () {
@@ -125,5 +126,3 @@ void main() {
     });
   });
 }
-
-import 'dart:ui';
