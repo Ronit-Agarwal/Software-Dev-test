@@ -412,8 +412,6 @@ class CameraService with ChangeNotifier {
     _initTimeout?.cancel();
     _retryTimer?.cancel();
     await _disposeController();
-    _isInitialized = false;
-    _isStreaming = false;
     _cameraEnabled = true;
     _setState(CameraState.disposed);
     notifyListeners();

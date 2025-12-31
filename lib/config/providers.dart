@@ -8,7 +8,7 @@ import 'package:signsync/models/app_mode.dart';
 import 'package:signsync/models/camera_state.dart';
 import 'package:signsync/services/camera_service.dart';
 import 'package:signsync/services/frame_extractor.dart';
-import 'package:signsync/services/ml_inference_service.dart';
+import 'package:signsync/services/ml_orchestrator_service.dart';
 
 /// Root provider for the application configuration.
 final appConfigProvider = ChangeNotifierProvider<AppConfig>((ref) {
@@ -79,6 +79,37 @@ final framePerformanceProvider = Provider<FramePerformanceMetrics>((ref) {
 /// Provider for ML inference service.
 final mlInferenceServiceProvider = ChangeNotifierProvider<MlInferenceService>((ref) {
   return MlInferenceService();
+});
+
+/// Provider for ML orchestrator service (main ML coordinator).
+final mlOrchestratorProvider = ChangeNotifierProvider<MlOrchestratorService>((ref) {
+  return MlOrchestratorService();
+});
+
+/// Provider for latest ML result.
+final mlResultProvider = Provider<MlResult?>((ref) {
+  final orchestrator = ref.watch(mlOrchestratorProvider);
+  // Return the most recent result based on current mode
+  switch (orchestrator.currentMode) {
+    case AppMode.translation:
+      return orchestrator.latestDynamicSign != null 
+          ? MlResult.asl(dynamicSign: orchestrator.latestDynamicSign)
+          : (orchestrator.latestAslSign != null
+              ? MlResult.asl(staticSign: orchestrator.latestAslSign)
+              : null);
+    case AppMode.detection:
+      return orchestrator.latestDetection != null
+          ? MlResult.detection(frame: orchestrator.latestDetection!)
+          : null;
+    default:
+      return null;
+  }
+});
+
+/// Provider for ML performance metrics.
+final mlPerformanceProvider = Provider<Map<String, dynamic>>((ref) {
+  final orchestrator = ref.watch(mlOrchestratorProvider);
+  return orchestrator.performanceMetrics;
 });
 
 /// Provider for the current app mode.
