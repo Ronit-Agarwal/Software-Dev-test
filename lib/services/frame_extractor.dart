@@ -229,7 +229,7 @@ class FrameExtractor with ChangeNotifier {
 
     // Create CameraFrame
     final cameraFrame = CameraFrame.fromCameraImage(
-      frameToProcess,
+      _latestFrame!,
       sequenceNumber: sequenceNumber,
       processingLatencyMs: processingLatency,
     );

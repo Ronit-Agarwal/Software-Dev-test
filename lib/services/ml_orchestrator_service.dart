@@ -1,0 +1,506 @@
+import 'dart:async';
+import 'dart:collection';
+import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
+import 'package:signsync/core/error/exceptions.dart';
+import 'package:signsync/core/logging/logger_service.dart';
+import 'package:signsync/models/app_mode.dart';
+import 'package:signsync/models/asl_sign.dart';
+import 'package:signsync/models/detected_object.dart';
+import 'package:signsync/services/cnn_inference_service.dart';
+import 'package:signsync/services/lstm_inference_service.dart';
+import 'package:signsync/services/yolo_detection_service.dart';
+
+/// Orchestrates multiple ML models (CNN, LSTM, YOLO) based on app mode.
+///
+/// This service provides a unified interface for ML inference across
+/// ASL translation, object detection, and temporal recognition modes.
+class MlOrchestratorService with ChangeNotifier {
+  // Individual model services
+  final CnnInferenceService _cnnService;
+  final LstmInferenceService _lstmService;
+  final YoloDetectionService _yoloService;
+
+  // State management
+  bool _isInitialized = false;
+  bool _isProcessing = false;
+  AppMode _currentMode = AppMode.translation;
+  String? _error;
+  
+  // Results state
+  AslSign? _latestAslSign;
+  AslSign? _latestDynamicSign;
+  DetectionFrame? _latestDetection;
+  final Queue<MlResult> _resultQueue = Queue<MlResult>();
+  
+  // Performance monitoring
+  final List<double> _processingTimes = [];
+  final Map<AppMode, int> _framesPerMode = {};
+  int _totalFramesProcessed = 0;
+  final Stopwatch _processingStopwatch = Stopwatch();
+
+  // Configuration
+  bool _enableCnn = true;
+  bool _enableLstm = true;
+  bool _enableYolo = true;
+  double _aslConfidenceThreshold = 0.85;
+  double _objectConfidenceThreshold = 0.25;
+
+  // Getters
+  bool get isInitialized => _isInitialized;
+  bool get isProcessing => _isProcessing;
+  AppMode get currentMode => _currentMode;
+  String? get error => _error;
+  AslSign? get latestAslSign => _latestAslSign;
+  AslSign? get latestDynamicSign => _latestDynamicSign;
+  DetectionFrame? get latestDetection => _latestDetection;
+  int get totalFramesProcessed => _totalFramesProcessed;
+  double get averageProcessingTime => _processingTimes.isNotEmpty 
+      ? _processingTimes.reduce((a, b) => a + b) / _processingTimes.length 
+      : 0.0;
+  int get queuedResults => _resultQueue.length;
+
+  /// Creates orchestrator with optional model services (for dependency injection).
+  MlOrchestratorService({
+    CnnInferenceService? cnnService,
+    LstmInferenceService? lstmService,
+    YoloDetectionService? yoloService,
+  })  : _cnnService = cnnService ?? CnnInferenceService(),
+        _lstmService = lstmService ?? LstmInferenceService(),
+        _yoloService = yoloService ?? YoloDetectionService();
+
+  /// Initializes the ML orchestrator with all required models.
+  Future<void> initialize({
+    required AppMode initialMode,
+    String? cnnModelPath,
+    String? lstmModelPath,
+    String? yoloModelPath,
+  }) async {
+    if (_isInitialized) {
+      LoggerService.warn('ML orchestrator already initialized');
+      return;
+    }
+
+    try {
+      LoggerService.info('Initializing ML orchestrator for mode: $initialMode');
+      _processingStopwatch.start();
+      _currentMode = initialMode;
+
+      // Initialize models based on mode
+      switch (initialMode) {
+        case AppMode.translation:
+          if (_enableCnn) {
+            await _cnnService.initialize(modelPath: cnnModelPath ?? 'assets/models/asl_cnn.tflite');
+          }
+          if (_enableLstm) {
+            await _lstmService.initialize(
+              lstmModelPath: lstmModelPath ?? 'assets/models/asl_lstm.tflite',
+              cnnModelPath: cnnModelPath ?? 'assets/models/asl_cnn.tflite',
+            );
+          }
+          break;
+        case AppMode.detection:
+          if (_enableYolo) {
+            await _yoloService.initialize(modelPath: yoloModelPath ?? 'assets/models/yolov11.tflite');
+          }
+          break;
+        case AppMode.sound:
+          // Sound mode doesn't use visual models
+          break;
+        case AppMode.chat:
+          // Chat mode may use different models in future
+          break;
+      }
+
+      _isInitialized = true;
+      _error = null;
+      notifyListeners();
+      LoggerService.info('ML orchestrator initialized successfully');
+    } catch (e, stack) {
+      _error = 'Failed to initialize ML orchestrator: $e';
+      LoggerService.error('ML orchestrator initialization failed', error: e, stack: stack);
+      rethrow;
+    }
+  }
+
+  /// Processes a camera frame with the current model pipeline.
+  Future<MlResult> processFrame(CameraImage image) async {
+    if (!_isInitialized) {
+      throw MlOrchestratorException('ML orchestrator not initialized. Call initialize() first.');
+    }
+
+    if (_isProcessing) {
+      LoggerService.warn('ML processing already in progress, skipping frame');
+      return MlResult.skipped();
+    }
+
+    _isProcessing = true;
+    _processingStopwatch.reset();
+    final frameStartTime = DateTime.now();
+
+    try {
+      MlResult result;
+
+      switch (_currentMode) {
+        case AppMode.translation:
+          result = await _processAslFrame(image);
+          break;
+        case AppMode.detection:
+          result = await _processDetectionFrame(image);
+          break;
+        case AppMode.sound:
+          result = MlResult.skipped(); // Sound mode doesn't process frames
+          break;
+        case AppMode.chat:
+          result = MlResult.skipped(); // Chat mode may use different processing
+          break;
+      }
+
+      // Update metrics
+      _processingStopwatch.stop();
+      final processingTime = _processingStopwatch.elapsedMilliseconds.toDouble();
+      _processingTimes.add(processingTime);
+      _totalFramesProcessed++;
+      
+      _framesPerMode[_currentMode] = (_framesPerMode[_currentMode] ?? 0) + 1;
+      
+      if (_processingTimes.length > 30) {
+        _processingTimes.removeAt(0);
+      }
+
+      // Add to result queue for temporal analysis
+      _resultQueue.add(result);
+      if (_resultQueue.length > 50) {
+        _resultQueue.removeFirst();
+      }
+
+      LoggerService.debug('ML processing: $result in ${processingTime}ms');
+      
+      notifyListeners();
+      return result;
+    } catch (e, stack) {
+      _error = 'ML processing failed: $e';
+      LoggerService.error('ML processing failed', error: e, stack: stack);
+      return MlResult.error('Processing failed: $e');
+    } finally {
+      _isProcessing = false;
+    }
+  }
+
+  /// Processes an ASL translation frame (CNN + LSTM).
+  Future<MlResult> _processAslFrame(CameraImage image) async {
+    AslSign? detectedSign;
+    AslSign? dynamicSign;
+    String? message;
+
+    // Run CNN for static signs if enabled
+    if (_enableCnn) {
+      try {
+        detectedSign = await _cnnService.processFrame(image);
+        if (detectedSign != null && detectedSign.confidence >= _aslConfidenceThreshold) {
+          _latestAslSign = detectedSign;
+          message = 'Detected: ${detectedSign.letter}';
+        }
+      } catch (e) {
+        LoggerService.warn('CNN processing failed: $e');
+      }
+    }
+
+    // Run LSTM for dynamic signs if enabled
+    if (_enableLstm && detectedSign != null) {
+      try {
+        dynamicSign = await _lstmService.processFrame(image);
+        if (dynamicSign != null && dynamicSign.confidence >= _aslConfidenceThreshold) {
+          _latestDynamicSign = dynamicSign;
+          message = 'Dynamic: ${dynamicSign.word}';
+        }
+      } catch (e) {
+        LoggerService.warn('LSTM processing failed: $e');
+      }
+    }
+
+    return MlResult.asl(
+      staticSign: detectedSign,
+      dynamicSign: dynamicSign,
+      message: message,
+    );
+  }
+
+  /// Processes an object detection frame (YOLO).
+  Future<MlResult> _processDetectionFrame(CameraImage image) async {
+    if (!_enableYolo) {
+      return MlResult.skipped();
+    }
+
+    try {
+      final detection = await _yoloService.detect(image);
+      
+      if (detection != null) {
+        _latestDetection = detection;
+        final objects = detection.highConfidenceObjects();
+        final message = 'Detected ${objects.length} objects';
+        
+        return MlResult.detection(
+          frame: detection,
+          objects: objects,
+          message: message,
+        );
+      }
+      
+      return MlResult.detection(
+        frame: DetectionFrame(
+          id: 'empty_${DateTime.now().millisecondsSinceEpoch}',
+          objects: [],
+          timestamp: DateTime.now(),
+          frameIndex: _totalFramesProcessed,
+        ),
+        objects: [],
+        message: 'No objects detected',
+      );
+    } catch (e) {
+      LoggerService.error('Detection processing failed', error: e);
+      return MlResult.error('Detection failed: $e');
+    }
+  }
+
+  /// Switches between different ML modes.
+  Future<void> switchMode(AppMode newMode, {CameraImage? currentFrame}) async {
+    if (_currentMode == newMode) {
+      return;
+    }
+
+    LoggerService.info('Switching ML mode from $_currentMode to $newMode');
+    
+    final oldMode = _currentMode;
+    _currentMode = newMode;
+
+    // Load models for new mode if needed
+    switch (newMode) {
+      case AppMode.translation:
+        if (_enableCnn && !_cnnService.isModelLoaded) {
+          await _cnnService.initialize();
+        }
+        if (_enableLstm && !_lstmService.isModelLoaded) {
+          await _lstmService.initialize();
+        }
+        break;
+      case AppMode.detection:
+        if (_enableYolo && !_yoloService.isModelLoaded) {
+          await _yoloService.initialize();
+        }
+        break;
+      case AppMode.sound:
+        // No visual models needed
+        break;
+      case AppMode.chat:
+        // May need to unload heavy models
+        break;
+    }
+
+    // Unload models from old mode to free resources
+    if (oldMode == AppMode.translation) {
+      // Keep models loaded for fast switching, but could unload if needed
+    } else if (oldMode == AppMode.detection) {
+      // Keep YOLO loaded for fast switching
+    }
+
+    _resetModeState();
+    notifyListeners();
+    
+    // Process current frame in new mode if provided
+    if (currentFrame != null) {
+      unawaited(processFrame(currentFrame));
+    }
+  }
+
+  /// Processes results queue for temporal patterns.
+  List<MlResult> getRecentResults([int count = 10]) {
+    return _resultQueue.toList().sublist(
+      max(0, _resultQueue.length - count),
+    );
+  }
+
+  /// Gets ASL sequence from recent results.
+  List<AslSign> getAslSequence({int minConfidence = 80}) {
+    final sequence = <AslSign>[];
+    
+    for (final result in _resultQueue) {
+      if (result.type == MlResultType.asl) {
+        if (result.staticSign != null && result.staticSign!.confidence >= minConfidence / 100) {
+          sequence.add(result.staticSign!);
+        }
+      }
+    }
+    
+    return sequence;
+  }
+
+  /// Gets detection statistics across all processed frames.
+  Map<String, dynamic> get performanceMetrics => {
+        'totalFrames': _totalFramesProcessed,
+        'framesPerMode': _framesPerMode,
+        'averageProcessingTime': averageProcessingTime,
+        'currentMode': _currentMode.toString(),
+        'cnnStats': _cnnService.performanceStats,
+        'lstmStats': _lstmService.temporalStats,
+        'yoloStats': _yoloService.detectionStats,
+    'queueLength': _resultQueue.length,
+      };
+
+  // Configuration methods
+  void setConfidenceThresholds({double? aslThreshold, double? objectThreshold}) {
+    if (aslThreshold != null) {
+      _aslConfidenceThreshold = aslThreshold.clamp(0.0, 1.0);
+    }
+    if (objectThreshold != null) {
+      _objectConfidenceThreshold = objectThreshold.clamp(0.0, 1.0);
+    }
+    LoggerService.info('ML thresholds updated: ASL=$_aslConfidenceThreshold, Objects=$_objectConfidenceThreshold');
+  }
+
+  void setModelEnabled({bool? cnn, bool? lstm, bool? yolo}) {
+    _enableCnn = cnn ?? _enableCnn;
+    _enableLstm = lstm ?? _enableLstm;
+    _enableYolo = yolo ?? _enableYolo;
+    LoggerService.info('Model enabling: CNN=$_enableCnn, LSTM=$_enableLstm, YOLO=$_enableYolo');
+  }
+
+  void resetModeState() {
+    _resetModeState();
+  }
+
+  void _resetModeState() {
+    _latestAslSign = null;
+    _latestDynamicSign = null;
+    _latestDetection = null;
+    _resultQueue.clear();
+  }
+
+  /// Unloads all models to free resources.
+  Future<void> unloadAllModels() async {
+    LoggerService.info('Unloading all ML models');
+    
+    await Future.wait([
+      _cnnService.unloadModel(),
+      _lstmService.unloadModel(),
+      _yoloService.unloadModel(),
+    ]);
+
+    _isInitialized = false;
+    _resetState();
+    notifyListeners();
+  }
+
+  void _resetState() {
+    _resetModeState();
+    _processingTimes.clear();
+    _framesPerMode.clear();
+    _totalFramesProcessed = 0;
+    _processingStopwatch.reset();
+  }
+
+  @override
+  void dispose() {
+    LoggerService.info('Disposing ML orchestrator service');
+    _cnnService.dispose();
+    _lstmService.dispose();
+    _yoloService.dispose();
+    _resetState();
+    super.dispose();
+  }
+}
+
+/// Represents the result of ML orchestration.
+class MlResult {
+  final MlResultType type;
+  final AslSign? staticSign;
+  final AslSign? dynamicSign;
+  final DetectionFrame? frame;
+  final List<DetectedObject> objects;
+  final String? message;
+  final DateTime timestamp;
+
+  MlResult({
+    required this.type,
+    this.staticSign,
+    this.dynamicSign,
+    this.frame,
+    this.objects = const [],
+    this.message,
+    DateTime? timestamp,
+  }) : timestamp = timestamp ?? DateTime.now();
+
+  /// Creates an ASL result.
+  factory MlResult.asl({
+    AslSign? staticSign,
+    AslSign? dynamicSign,
+    String? message,
+  }) {
+    return MlResult(
+      type: MlResultType.asl,
+      staticSign: staticSign,
+      dynamicSign: dynamicSign,
+      message: message ?? (staticSign != null ? 'Detected: ${staticSign.letter}' : 
+                        dynamicSign != null ? 'Dynamic: ${dynamicSign.word}' : 'No sign detected'),
+    );
+  }
+
+  /// Creates a detection result.
+  factory MlResult.detection({
+    required DetectionFrame frame,
+    List<DetectedObject> objects = const [],
+    String? message,
+  }) {
+    return MlResult(
+      type: MlResultType.detection,
+      frame: frame,
+      objects: objects,
+      message: message ?? 'Detected ${objects.length} objects',
+    );
+  }
+
+  /// Creates a skipped frame result.
+  factory MlResult.skipped() {
+    return MlResult(
+      type: MlResultType.skipped,
+      message: 'Frame skipped',
+    );
+  }
+
+  /// Creates an error result.
+  factory MlResult.error(String error) {
+    return MlResult(
+      type: MlResultType.error,
+      message: error,
+    );
+  }
+
+  bool get isAsl => type == MlResultType.asl;
+  bool get isDetection => type == MlResultType.detection;
+  bool get isSkipped => type == MlResultType.skipped;
+  bool get isError => type == MlResultType.error;
+  bool get hasSign => staticSign != null || dynamicSign != null;
+  bool get hasObjects => objects.isNotEmpty || (frame?.objects.isNotEmpty ?? false);
+
+  @override
+  String toString() => 'MlResult(type: $type, message: $message, timestamp: $timestamp)';
+}
+
+/// Enum for ML result types.
+enum MlResultType {
+  asl,
+  detection,
+  skipped,
+  error,
+}
+
+/// Exception for ML orchestrator errors.
+class MlOrchestratorException implements Exception {
+  final String message;
+  final String? code;
+
+  const MlOrchestratorException(this.message, {this.code});
+
+  @override
+  String toString() => 'MlOrchestratorException: $message';
+}
