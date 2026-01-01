@@ -32,6 +32,8 @@ class NoiseEvent with EquatableMixin {
     required NoiseType type,
     required double intensity,
     Duration duration = Duration.zero,
+    double? alertThreshold,
+    Map<String, dynamic>? metadata,
   }) {
     return NoiseEvent(
       id: '${type.name}_${DateTime.now().millisecondsSinceEpoch}',
@@ -40,6 +42,10 @@ class NoiseEvent with EquatableMixin {
       intensity: intensity,
       timestamp: DateTime.now(),
       duration: duration,
+      metadata: {
+        if (alertThreshold != null) 'alertThreshold': alertThreshold,
+        ...?metadata,
+      },
     );
   }
 
@@ -86,7 +92,10 @@ class NoiseEvent with EquatableMixin {
   }
 
   /// Returns true if the intensity is above the alert threshold.
-  bool get shouldAlert => intensity >= 0.6 && isAlertEnabled;
+  bool get shouldAlert {
+    final threshold = (metadata['alertThreshold'] as num?)?.toDouble() ?? 0.6;
+    return intensity >= threshold && isAlertEnabled;
+  }
 
   @override
   String toString() {
@@ -96,15 +105,23 @@ class NoiseEvent with EquatableMixin {
 
 /// Types of sounds that can be detected and alerted.
 enum NoiseType {
-  doorbell('Doorbell', Icons.notifications),
-  knock('Knocking', Icons.doorbell),
   alarm('Alarm', Icons.alarm),
   siren('Siren', Icons.speaker),
-  phoneRing('Phone Ring', Icons.phone'),
-  babyCrying('Baby Crying', Icons.child_care),
-  glassBreak('Glass Break', Icons.window),
   smokeDetector('Smoke Detector', Icons.warning),
+  glassBreak('Glass Break', Icons.window),
+
+  doorbell('Doorbell', Icons.notifications),
+  knock('Knocking', Icons.doorbell),
+  door('Door', Icons.door_front_door),
+  footsteps('Footsteps', Icons.directions_walk),
+
+  vehicle('Vehicle', Icons.directions_car),
+  speech('Speech', Icons.record_voice_over),
+  phoneRing('Phone Ring', Icons.phone),
+  babyCrying('Baby Crying', Icons.child_care),
   dogBark('Dog Barking', Icons.pets),
+  music('Music', Icons.music_note),
+
   custom('Custom', Icons.music_note);
 
   final String displayName;

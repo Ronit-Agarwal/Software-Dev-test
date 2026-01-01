@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:signsync/config/app_config.dart';
@@ -12,6 +14,11 @@ import 'package:signsync/services/cnn_inference_service.dart';
 import 'package:signsync/services/lstm_inference_service.dart';
 import 'package:signsync/services/yolo_detection_service.dart';
 import 'package:signsync/services/ml_orchestrator_service.dart';
+import 'package:signsync/services/audio_service.dart';
+import 'package:signsync/services/tts_service.dart';
+import 'package:signsync/services/audio_alert_service.dart';
+import 'package:signsync/services/sound_monitor_service.dart';
+import 'package:signsync/services/system_metrics_service.dart';
 
 /// Root provider for the application configuration.
 final appConfigProvider = ChangeNotifierProvider<AppConfig>((ref) {
@@ -112,6 +119,40 @@ final lstmInferenceServiceProvider = ChangeNotifierProvider<LstmInferenceService
 /// Provider for YOLO detection service (real-time object detection).
 final yoloDetectionServiceProvider = ChangeNotifierProvider<YoloDetectionService>((ref) {
   return YoloDetectionService();
+});
+
+/// Provider for audio service (sound monitoring and alerts).
+final audioServiceProvider = ChangeNotifierProvider<AudioService>((ref) {
+  return AudioService();
+});
+
+/// Provider for text-to-speech.
+final ttsServiceProvider = ChangeNotifierProvider<TtsService>((ref) {
+  return TtsService();
+});
+
+/// Provider for spoken alert coordination (object detection + sounds).
+final audioAlertServiceProvider = ChangeNotifierProvider<AudioAlertService>((ref) {
+  final config = ref.watch(appConfigProvider);
+  final tts = ref.watch(ttsServiceProvider);
+
+  return AudioAlertService(tts: tts, config: config);
+});
+
+/// Provider for always-on sound monitoring.
+final soundMonitorProvider = ChangeNotifierProvider<SoundMonitorService>((ref) {
+  final audioService = ref.watch(audioServiceProvider);
+  final alerts = ref.watch(audioAlertServiceProvider);
+  final config = ref.watch(appConfigProvider);
+
+  return SoundMonitorService(audioService: audioService, audioAlerts: alerts, config: config);
+});
+
+/// Provider for system metrics (battery, memory) shown on the dashboard.
+final systemMetricsProvider = ChangeNotifierProvider<SystemMetricsService>((ref) {
+  final service = SystemMetricsService();
+  unawaited(service.initialize());
+  return service;
 });
 
 /// Provider for latest ML result.

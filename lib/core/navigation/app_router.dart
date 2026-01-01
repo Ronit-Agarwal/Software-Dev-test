@@ -37,6 +37,7 @@ class AppRouter {
       path: '/',
       name: 'home',
       pageBuilder: (context, state) => _buildPage(
+        context,
         const HomeScreen(),
         state: state,
         screenName: 'Home',
@@ -46,6 +47,7 @@ class AppRouter {
       path: '/translation',
       name: 'translation',
       pageBuilder: (context, state) => _buildPage(
+        context,
         const TranslationScreen(),
         state: state,
         screenName: 'ASL Translation',
@@ -55,6 +57,7 @@ class AppRouter {
       path: '/detection',
       name: 'detection',
       pageBuilder: (context, state) => _buildPage(
+        context,
         const DetectionScreen(),
         state: state,
         screenName: 'Object Detection',
@@ -64,6 +67,7 @@ class AppRouter {
       path: '/sound',
       name: 'sound',
       pageBuilder: (context, state) => _buildPage(
+        context,
         const SoundScreen(),
         state: state,
         screenName: 'Sound Alerts',
@@ -73,6 +77,7 @@ class AppRouter {
       path: '/chat',
       name: 'chat',
       pageBuilder: (context, state) => _buildPage(
+        context,
         const ChatScreen(),
         state: state,
         screenName: 'AI Chat',
@@ -82,6 +87,7 @@ class AppRouter {
       path: '/settings',
       name: 'settings',
       pageBuilder: (context, state) => _buildPage(
+        context,
         const SettingsScreen(),
         state: state,
         screenName: 'Settings',
@@ -96,16 +102,10 @@ class AppRouter {
   ) {
     final location = state.location;
 
-    // Redirect from root to translation
-    if (location == '/') {
-      return '/translation';
-    }
-
-    // Check permissions for camera-dependent routes
-    final permissionRoutes = ['/translation', '/detection'];
+    // Reserved for permission-based redirects.
+    final permissionRoutes = ['/translation', '/detection', '/sound'];
     if (permissionRoutes.any((r) => location.startsWith(r))) {
-      final permissionsService = PermissionsService();
-      // In a real implementation, check permissions here
+      // In a real implementation, check permissions here.
     }
 
     return null;
@@ -129,6 +129,7 @@ class AppRouter {
 
   /// Builds a page with common configuration.
   static Page _buildPage(
+    BuildContext context,
     Widget screen, {
     required GoRouterState state,
     required String screenName,
