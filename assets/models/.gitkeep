@@ -1,0 +1,70 @@
+# ASL ML Models
+
+This directory contains the TFLite models for ASL sign recognition.
+
+## Required Models
+
+### 1. asl_cnn.tflite (Required for Static ASL Sign Recognition)
+
+- **Architecture**: ResNet-50 CNN with FP16 quantization
+- **Input**: 224x224x3 RGB images
+- **Output**: 27 classes (26 letters A-Z + UNKNOWN)
+- **File Size**: ~100-150 MB
+
+### 2. asl_lstm.tflite (Optional, for Dynamic Sign Recognition)
+
+- **Architecture**: LSTM for temporal sequence modeling
+- **Input**: Sequence of CNN features
+- **Output**: Multi-sign word recognition
+
+### 3. yolov11.tflite (Optional, for Object Detection)
+
+- **Architecture**: YOLO v11
+- **Input**: 640x640 RGB images
+- **Output**: Object bounding boxes and classes
+
+## How to Add Models
+
+1. Convert your trained models to TFLite format (see `docs/MODEL_SETUP.md`)
+2. Place the `.tflite` files in this directory
+3. Ensure the models are listed in `pubspec.yaml` under `flutter.assets`
+
+```yaml
+flutter:
+  assets:
+    - assets/models/
+```
+
+## Model Placeholder
+
+The app includes placeholder logic for missing models. When models are missing:
+
+- The app will attempt to load the model on first use (lazy loading)
+- If the model file doesn't exist, appropriate error messages will be shown
+- The app will still function for other features (sound alerts, chat, etc.)
+
+## Downloading Pre-trained Models
+
+If you want to skip the training step:
+
+1. Check the project repository's Releases section for pre-trained models
+2. Download the models and place them in this directory
+3. Verify the models match the expected specifications
+
+## Model Security
+
+These models are trained on publicly available ASL datasets and do not contain:
+- Personal user data
+- Biometric information
+- Proprietary content
+
+They can be safely distributed with the application.
+
+## Performance Notes
+
+- **FP16 quantization** reduces model size by ~50% compared to FP32
+- **GPU delegate** can be enabled for devices with GPU support
+- **CPU delegate** works on all devices but may be slower
+- **Edge TPU** provides fastest inference on supported devices
+
+See `docs/MODEL_SETUP.md` for detailed conversion and optimization instructions.

@@ -12,78 +12,148 @@ import 'package:tflite_flutter/tflite_flutter.dart';
 ///
 /// Processes individual frames for static ASL signs with confidence filtering,
 /// temporal smoothing, and ASL dictionary mapping.
+///
+/// Features:
+/// - FP16 quantized ResNet-50 TFLite model
+/// - YUV420→RGB preprocessing pipeline
+/// - 224x224 input resizing with ImageNet normalization
+/// - 15-20 FPS inference with <100ms latency target
+/// - 0.85+ confidence threshold filtering
+/// - 3-5 frame temporal smoothing
+/// - Lazy model loading
+/// - Comprehensive error handling
 class CnnInferenceService with ChangeNotifier {
   Interpreter? _interpreter;
   bool _isModelLoaded = false;
   bool _isProcessing = false;
+  bool _isInitializing = false;
   AslSign? _latestSign;
   final List<AslSign> _signHistory = [];
   String? _error;
 
-  // Model parameters
+  // Model parameters - ResNet-50 with FP16 quantization
   static const int inputSize = 224;
   static const int numChannels = 3;
   static const int numClasses = 27; // 26 letters + 1 unknown/background
   static const double confidenceThreshold = 0.85;
+  static const double targetFpsMin = 15.0;
+  static const double targetFpsMax = 20.0;
+  static const int maxLatencyMs = 100;
+
+  // Lazy loading
+  String? _cachedModelPath;
+  bool _lazyLoadEnabled = true;
 
   // Performance monitoring
   final List<double> _inferenceTimes = [];
   final List<double> _confidenceHistory = [];
   int _framesProcessed = 0;
+  final List<double> _fpsHistory = [];
+  DateTime? _lastFrameTime;
 
-  // Temporal smoothing
+  // Temporal smoothing (configurable 3-5 frames, default 5)
   static const int smoothingWindow = 5;
-  final List<double> _temporalBuffer = [];
+  final List<InferenceResult> _temporalBuffer = [];
   
-  // ASL dictionary mapping
+  // ASL dictionary mapping (A-Z + common words)
   static const List<String> _aslDictionary = [
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
     'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
     'U', 'V', 'W', 'X', 'Y', 'Z', 'UNKNOWN'
   ];
   
-  // Common phrases mapping
+  // Common phrases mapping for multi-sign sequences
   static const Map<String, List<String>> _phraseMapping = {
     'HELLO': ['HELLO', 'HI', 'GREETING'],
     'THANKYOU': ['THANK YOU', 'THANKS'],
     'ILOVEYOU': ['I LOVE YOU'],
     'YES': ['YES'],
     'NO': ['NO'],
+    'PLEASE': ['PLEASE'],
+    'SORRY': ['SORRY'],
     'MORNING': ['GOOD MORNING', 'MORNING'],
     'NIGHT': ['GOOD NIGHT', 'NIGHT'],
-    'COMPUTER': ['COMPUTER', 'PC'],
+    'COMPUTER': ['COMPUTER', 'PC', 'LAPTOP'],
+    'PHONE': ['PHONE', 'CALL', 'TELEPHONE'],
+    'HELP': ['HELP'],
+    'THANKS': ['THANKS', 'THANK YOU'],
+    'GOOD': ['GOOD', 'GREAT'],
+    'BAD': ['BAD', 'NOT GOOD'],
   };
 
   // Getters
   bool get isModelLoaded => _isModelLoaded;
   bool get isProcessing => _isProcessing;
+  bool get isInitializing => _isInitializing;
   AslSign? get latestSign => _latestSign;
   String? get error => _error;
-  double get averageInferenceTime => _inferenceTimes.isNotEmpty 
-      ? _inferenceTimes.reduce((a, b) => a + b) / _inferenceTimes.length 
+  double get averageInferenceTime => _inferenceTimes.isNotEmpty
+      ? _inferenceTimes.reduce((a, b) => a + b) / _inferenceTimes.length
       : 0.0;
   double get averageConfidence => _confidenceHistory.isNotEmpty
       ? _confidenceHistory.reduce((a, b) => a + b) / _confidenceHistory.length
       : 0.0;
   int get framesProcessed => _framesProcessed;
+  double get currentFps => _fpsHistory.isNotEmpty
+      ? _fpsHistory.reduce((a, b) => a + b) / _fpsHistory.length
+      : 0.0;
+
+  /// Gets the ASL dictionary labels.
+  List<String> get aslDictionary => List.unmodifiable(_aslDictionary);
 
   /// Initializes the CNN service and loads the ResNet-50 model.
-  Future<void> initialize({String modelPath = 'assets/models/asl_cnn.tflite'}) async {
+  ///
+  /// Supports lazy loading - set [lazy] to false to load immediately.
+  /// If [lazy] is true (default), the model will be loaded on first inference.
+  Future<void> initialize({
+    String modelPath = 'assets/models/asl_cnn.tflite',
+    bool lazy = true,
+  }) async {
+    if (_isModelLoaded) {
+      LoggerService.debug('CNN model already loaded');
+      return;
+    }
+
+    _cachedModelPath = modelPath;
+    _lazyLoadEnabled = lazy;
+
+    if (lazy) {
+      LoggerService.info('CNN inference service initialized (lazy mode enabled)');
+      notifyListeners();
+      return;
+    }
+
+    return _loadModelSync();
+  }
+
+  /// Synchronously loads the model (called from initialize or on first use).
+  Future<void> _loadModelSync() async {
+    if (_isInitializing || _isModelLoaded) {
+      return;
+    }
+
+    _isInitializing = true;
+    notifyListeners();
+
     try {
-      LoggerService.info('Initializing CNN inference service');
+      LoggerService.info('Loading CNN ResNet-50 model with FP16 quantization...');
       _error = null;
 
-      // Load the model
+      final modelPath = _cachedModelPath ?? 'assets/models/asl_cnn.tflite';
+
+      // Load the model with optimized settings
       await _loadModel(modelPath);
-      
+
       _isModelLoaded = true;
       _resetState();
-      notifyListeners();
       LoggerService.info('CNN inference service initialized successfully');
     } catch (e, stack) {
       _error = 'Failed to initialize CNN service: $e';
       LoggerService.error('CNN initialization failed', error: e, stack: stack);
       rethrow;
+    } finally {
+      _isInitializing = false;
+      notifyListeners();
     }
   }
 
@@ -133,13 +203,22 @@ class CnnInferenceService with ChangeNotifier {
   }
 
   /// Processes a camera image for ASL inference.
+  ///
+  /// Handles lazy loading on first call and runs at 15-20 FPS with latency tracking.
+  /// Returns null if confidence is below 0.85 threshold.
   Future<AslSign?> processFrame(CameraImage image) async {
+    // Lazy load model if enabled and not loaded
     if (!_isModelLoaded) {
-      throw MlInferenceException('CNN model not loaded. Call initialize() first.');
+      if (_lazyLoadEnabled && _cachedModelPath != null) {
+        LoggerService.info('Lazy loading CNN model on first inference...');
+        await _loadModelSync();
+      } else {
+        throw MlInferenceException('CNN model not loaded. Call initialize() first.');
+      }
     }
 
     if (_isProcessing) {
-      LoggerService.warn('CNN inference already in progress, skipping frame');
+      LoggerService.debug('CNN inference already in progress, skipping frame');
       return null;
     }
 
@@ -147,20 +226,30 @@ class CnnInferenceService with ChangeNotifier {
     final stopwatch = Stopwatch()..start();
 
     try {
-      // Preprocess the image
+      // Calculate FPS
+      _calculateFps();
+
+      // Preprocess the image (YUV420→RGB, 224x224 resize, normalize)
       final processedImage = await _preprocessImage(image);
-      
+
       // Run inference
       final inferenceResult = await _runInference(processedImage);
-      
-      // Apply temporal smoothing
+
+      // Check latency target
+      final latency = stopwatch.elapsedMilliseconds;
+      if (latency > maxLatencyMs) {
+        LoggerService.warn('CNN inference latency exceeded target: ${latency}ms > ${maxLatencyMs}ms');
+      }
+
+      // Apply temporal smoothing (3-5 frame window)
       final smoothedResult = await _applyTemporalSmoothing(inferenceResult);
-      
-      // Skip low confidence predictions
+
+      // Skip low confidence predictions (< 0.85)
       if (smoothedResult.confidence < confidenceThreshold) {
+        LoggerService.debug('Confidence ${smoothedResult.confidence.toStringAsFixed(3)} below threshold $confidenceThreshold');
         return null;
       }
-      
+
       // Create ASL sign with high confidence
       final sign = AslSign.fromLetter(
         smoothedResult.letter,
@@ -172,18 +261,21 @@ class CnnInferenceService with ChangeNotifier {
       _signHistory.add(sign);
       _confidenceHistory.add(sign.confidence);
       _framesProcessed++;
-      
+
       // Maintain history sizes
       if (_signHistory.length > 50) _signHistory.removeAt(0);
       if (_confidenceHistory.length > 20) _confidenceHistory.removeAt(0);
-      
+
       // Track inference time
       stopwatch.stop();
       _inferenceTimes.add(stopwatch.elapsedMilliseconds.toDouble());
       if (_inferenceTimes.length > 20) _inferenceTimes.removeAt(0);
-      
-      LoggerService.debug('CNN inference: ${sign.letter} (${(sign.confidence * 100).toStringAsFixed(1)}%) in ${stopwatch.elapsedMilliseconds}ms');
-      
+
+      LoggerService.debug(
+        'CNN inference: ${sign.letter} (${(sign.confidence * 100).toStringAsFixed(1)}%) '
+        'in ${stopwatch.elapsedMilliseconds}ms (avg: ${averageInferenceTime.toStringAsFixed(1)}ms)',
+      );
+
       return sign;
     } catch (e, stack) {
       _error = 'CNN inference failed: $e';
@@ -193,6 +285,28 @@ class CnnInferenceService with ChangeNotifier {
       _isProcessing = false;
       notifyListeners();
     }
+  }
+
+  /// Calculates current FPS for performance monitoring.
+  void _calculateFps() {
+    final now = DateTime.now();
+
+    if (_lastFrameTime != null) {
+      final elapsed = now.difference(_lastFrameTime!).inMilliseconds;
+      final fps = 1000.0 / elapsed;
+      _fpsHistory.add(fps);
+
+      if (_fpsHistory.length > 30) {
+        _fpsHistory.removeAt(0);
+      }
+
+      // Check if FPS is within target range
+      if (fps < targetFpsMin || fps > targetFpsMax) {
+        LoggerService.debug('FPS: ${fps.toStringAsFixed(1)} (target: $targetFpsMin-$targetFpsMax)');
+      }
+    }
+
+    _lastFrameTime = now;
   }
 
   /// Preprocesses camera image for model input.
@@ -222,10 +336,12 @@ class CnnInferenceService with ChangeNotifier {
   }
 
   /// Post-processes model output to get prediction.
+  ///
+  /// Uses softmax probability distribution to determine the most likely sign.
   InferenceResult _postProcessOutput(List<double> output) {
     double maxConfidence = 0.0;
     int maxIndex = 0;
-    
+
     for (int i = 0; i < output.length; i++) {
       if (output[i] > maxConfidence) {
         maxConfidence = output[i];
@@ -233,43 +349,70 @@ class CnnInferenceService with ChangeNotifier {
       }
     }
 
-    // Get the corresponding letter
-    final letter = maxIndex < _aslDictionary.length 
-        ? _aslDictionary[maxIndex] 
+    // Get the corresponding letter from ASL dictionary
+    final letter = maxIndex < _aslDictionary.length
+        ? _aslDictionary[maxIndex]
         : 'UNKNOWN';
-    
+
     return InferenceResult(
       letter: letter,
       confidence: maxConfidence,
       classIndex: maxIndex,
+      rawOutput: output,
     );
   }
 
   /// Applies temporal smoothing to reduce jitter.
+  ///
+  /// Uses a 3-5 frame sliding window to smooth predictions and reduce false positives.
+  /// Only applies smoothing when the buffer has at least 3 frames.
   Future<InferenceResult> _applyTemporalSmoothing(InferenceResult result) async {
     // Add current result to buffer
-    _temporalBuffer.add(result.confidence);
+    _temporalBuffer.add(result);
+
+    // Maintain buffer size (3-5 frames, default 5)
     if (_temporalBuffer.length > smoothingWindow) {
       _temporalBuffer.removeAt(0);
     }
 
-    // If buffer is not full, return original result
-    if (_temporalBuffer.length < smoothingWindow) {
+    // If buffer has fewer than 3 frames, return original result
+    if (_temporalBuffer.length < 3) {
       return result;
     }
 
-    // Calculate average confidence
-    final avgConfidence = _temporalBuffer.reduce((a, b) => a + b) / _temporalBuffer.length;
-    
-    // Update confidence with temporal smoothing
-    if (result.confidence > avgConfidence * 0.8) {
-      result = InferenceResult(
-        letter: result.letter,
+    // Count occurrences of each prediction in the buffer
+    final Map<String, int> predictionCounts = {};
+    final Map<String, double> predictionConfidences = {};
+
+    for (final r in _temporalBuffer) {
+      predictionCounts[r.letter] = (predictionCounts[r.letter] ?? 0) + 1;
+      predictionConfidences[r.letter] = (predictionConfidences[r.letter] ?? 0.0) + r.confidence;
+    }
+
+    // Find the most frequent prediction
+    String mostFrequent = result.letter;
+    int maxCount = 1;
+
+    for (final entry in predictionCounts.entries) {
+      if (entry.value > maxCount) {
+        maxCount = entry.value;
+        mostFrequent = entry.key;
+      }
+    }
+
+    // If the most frequent prediction appears in at least 3 frames, use it
+    if (maxCount >= 3 && mostFrequent != 'UNKNOWN') {
+      final avgConfidence = predictionConfidences[mostFrequent]! / maxCount;
+
+      return InferenceResult(
+        letter: mostFrequent,
         confidence: avgConfidence,
-        classIndex: result.classIndex,
+        classIndex: _aslDictionary.indexOf(mostFrequent),
+        rawOutput: result.rawOutput,
       );
     }
 
+    // Otherwise, return original result
     return result;
   }
 
@@ -341,15 +484,23 @@ class InferenceResult {
   final String letter;
   final double confidence;
   final int classIndex;
+  final List<double>? rawOutput;
 
   const InferenceResult({
     required this.letter,
     required this.confidence,
     required this.classIndex,
+    this.rawOutput,
   });
 
   @override
-  String toString() => 'InferenceResult(letter: $letter, confidence: ${confidence.toStringAsFixed(3)})';
+  String toString() => 'InferenceResult(letter: $letter, confidence: ${confidence.toStringAsFixed(3)}, classIndex: $classIndex)';
+
+  /// Returns true if this result has high confidence (>= 0.85).
+  bool get isHighConfidence => confidence >= 0.85;
+
+  /// Returns true if this is an unknown/low confidence prediction.
+  bool get isUnknown => letter == 'UNKNOWN' || confidence < 0.5;
 }
 
 /// Exception for model loading errors.
