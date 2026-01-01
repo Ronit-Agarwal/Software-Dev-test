@@ -1,22 +1,28 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:signsync/config/app_config.dart';
 import 'package:signsync/core/navigation/app_router.dart';
 import 'package:signsync/core/theme/app_theme.dart';
-import 'package:signsync/services/permissions_service.dart';
 import 'package:signsync/models/app_mode.dart';
 import 'package:signsync/models/camera_state.dart';
+import 'package:signsync/services/alert_queue_service.dart';
+import 'package:signsync/services/asl_translation_service.dart';
+import 'package:signsync/services/audio_service.dart';
 import 'package:signsync/services/camera_service.dart';
-import 'package:signsync/services/frame_extractor.dart';
 import 'package:signsync/services/cnn_inference_service.dart';
+import 'package:signsync/services/frame_extractor.dart';
 import 'package:signsync/services/lstm_inference_service.dart';
-import 'package:signsync/services/yolo_detection_service.dart';
+import 'package:signsync/services/ml_inference_service.dart';
 import 'package:signsync/services/ml_orchestrator_service.dart';
+import 'package:signsync/services/object_audio_alert_service.dart';
+import 'package:signsync/services/permissions_service.dart';
+import 'package:signsync/services/tts_service.dart';
+import 'package:signsync/services/yolo_detection_service.dart';
 
-/// Root provider for the application configuration.
-final appConfigProvider = ChangeNotifierProvider<AppConfig>((ref) {
-  return AppConfig();
-});
 
 /// Provider for the GoRouter instance.
 final routerProvider = Provider<GoRouter>((ref) {
@@ -112,6 +118,89 @@ final lstmInferenceServiceProvider = ChangeNotifierProvider<LstmInferenceService
 /// Provider for YOLO detection service (real-time object detection).
 final yoloDetectionServiceProvider = ChangeNotifierProvider<YoloDetectionService>((ref) {
   return YoloDetectionService();
+});
+
+/// Provider for native TTS.
+final ttsServiceProvider = ChangeNotifierProvider<TtsService>((ref) {
+  final config = ref.watch(appConfigProvider);
+  final service = TtsService();
+
+  unawaited(
+    service.initialize(
+      volume: config.ttsVolume,
+      rate: config.ttsRate,
+      pitch: config.ttsPitch,
+    ),
+  );
+
+  ref.listen(appConfigProvider, (_, next) {
+    service.updateSettings(
+      volume: next.ttsVolume,
+      rate: next.ttsRate,
+      pitch: next.ttsPitch,
+    );
+  });
+
+  return service;
+});
+
+/// Provider for alert queue (object + sound alerts) with priority + dedupe.
+final alertQueueServiceProvider = ChangeNotifierProvider<AlertQueueService>((ref) {
+  final config = ref.watch(appConfigProvider);
+  final tts = ref.watch(ttsServiceProvider);
+  final service = AlertQueueService(tts: tts);
+
+  service.updateSettings(
+    enabled: config.ttsEnabled,
+    spatialCuesEnabled: config.spatialCuesEnabled,
+  );
+
+  ref.listen(appConfigProvider, (_, next) {
+    service.updateSettings(
+      enabled: next.ttsEnabled,
+      spatialCuesEnabled: next.spatialCuesEnabled,
+    );
+  });
+
+  return service;
+});
+
+/// Provider that converts object detection frames into spoken alerts.
+final objectAudioAlertServiceProvider = ChangeNotifierProvider<ObjectAudioAlertService>((ref) {
+  final config = ref.watch(appConfigProvider);
+  final alerts = ref.watch(alertQueueServiceProvider);
+  final service = ObjectAudioAlertService(alerts: alerts);
+
+  service.updateSettings(enabled: config.objectAudioAlertsEnabled);
+
+  ref.listen(appConfigProvider, (_, next) {
+    service.updateSettings(enabled: next.objectAudioAlertsEnabled);
+  });
+
+  return service;
+});
+
+/// Provider for sound detection service.
+final audioServiceProvider = ChangeNotifierProvider<AudioService>((ref) {
+  final config = ref.watch(appConfigProvider);
+  final service = AudioService();
+
+  service.updateSettings(noiseAlertThreshold: config.soundAlertThreshold);
+  service.hapticsEnabled = config.hapticFeedbackEnabled;
+
+  ref.listen(appConfigProvider, (_, next) {
+    service.updateSettings(noiseAlertThreshold: next.soundAlertThreshold);
+    service.hapticsEnabled = next.hapticFeedbackEnabled;
+  });
+
+  return service;
+});
+
+/// Provider for English-to-ASL translation.
+final aslTranslationServiceProvider = ChangeNotifierProvider<AslTranslationService>((ref) {
+  final service = AslTranslationService();
+  unawaited(service.initialize());
+  return service;
 });
 
 /// Provider for latest ML result.

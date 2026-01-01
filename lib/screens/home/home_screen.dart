@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:signsync/config/providers.dart';
 import 'package:signsync/models/app_mode.dart';
+import 'package:signsync/screens/chat/chat_screen.dart';
+import 'package:signsync/screens/detection/detection_screen.dart';
+import 'package:signsync/screens/sound/sound_screen.dart';
+import 'package:signsync/screens/translation/translation_screen.dart';
 import 'package:signsync/widgets/common/bottom_nav_bar.dart';
-import 'package:signsync/core/theme/colors.dart';
 import 'package:signsync/utils/constants.dart';
 
 /// Home screen with bottom navigation for mode switching.

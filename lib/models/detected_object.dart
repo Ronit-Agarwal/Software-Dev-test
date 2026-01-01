@@ -36,6 +36,7 @@ class DetectedObject with EquatableMixin {
     required Rect boundingBox,
     double? distance,
     double? depth,
+    Map<String, dynamic> metadata = const {},
   }) {
     return DetectedObject(
       id: '${label}_${DateTime.now().millisecondsSinceEpoch}',
@@ -45,6 +46,7 @@ class DetectedObject with EquatableMixin {
       boundingBox: boundingBox,
       distance: distance,
       depth: depth,
+      metadata: metadata,
     );
   }
 

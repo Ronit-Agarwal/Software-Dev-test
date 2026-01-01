@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:ui';
+
 import 'package:flutter/foundation.dart';
 import 'package:signsync/core/error/exceptions.dart';
 import 'package:signsync/core/logging/logger_service.dart';

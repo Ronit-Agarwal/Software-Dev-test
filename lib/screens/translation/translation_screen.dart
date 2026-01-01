@@ -1,6 +1,7 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:signsync/config/providers.dart';
 import 'package:signsync/models/asl_sign.dart';
 import 'package:signsync/models/camera_state.dart';
@@ -155,6 +156,11 @@ class _TranslationScreenState extends ConsumerState<TranslationScreen>
         centerTitle: true,
         actions: [
           IconButton(
+            icon: const Icon(Icons.g_translate),
+            onPressed: () => context.push('/english-to-asl'),
+            tooltip: 'English → ASL',
+          ),
+          IconButton(
             icon: const Icon(Icons.switch_camera),
             onPressed: () => ref.read(cameraServiceProvider).switchCamera(),
             tooltip: 'Switch Camera',
@@ -170,7 +176,7 @@ class _TranslationScreenState extends ConsumerState<TranslationScreen>
             tooltip: 'History',
           ),
         ],
-      ),
+
       body: Column(
         children: [
           // Camera Preview Area
