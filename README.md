@@ -5,6 +5,12 @@ A production-grade Flutter application for ASL sign language translation, object
 ## Features
 
 - **ASL Translation**: Real-time ASL sign detection and translation
+  - Static sign recognition using ResNet-50 CNN (A-Z + common words)
+  - Dynamic sign recognition using LSTM (multi-sign sequences)
+  - FP16 quantized models for efficient inference
+  - 15-20 FPS with <100ms latency
+  - Confidence threshold filtering (0.85+)
+  - Temporal smoothing (3-5 frame window)
 - **Object Detection**: Identify objects in your surroundings using camera
 - **Sound Alerts**: Detect and notify for important sounds
 - **AI Chat**: Chat with SignSync AI about sign language
@@ -23,8 +29,26 @@ A production-grade Flutter application for ASL sign language translation, object
 1. Clone the repository
 2. Run `flutter pub get`
 3. Run `flutter pub run build_runner build` to generate required files
-4. Set up Firebase (optional - see Firebase Setup)
-5. Run `flutter run`
+4. Set up ML models (optional - see ML Model Setup below)
+5. Set up Firebase (optional - see Firebase Setup)
+6. Run `flutter run`
+
+### ML Model Setup
+
+The app requires TFLite models for ASL sign recognition. See [docs/MODEL_SETUP.md](docs/MODEL_SETUP.md) for detailed instructions:
+
+1. **Option A: Use Pre-trained Models** (if available in project releases)
+   - Download models from releases
+   - Place `asl_cnn.tflite` in `assets/models/`
+
+2. **Option B: Train Your Own Models**
+   - Follow [docs/MODEL_SETUP.md](docs/MODEL_SETUP.md) for conversion
+   - Train ResNet-50 CNN on ASL alphabet dataset
+   - Convert to TFLite with FP16 quantization
+
+3. **Option C: Run in Demo Mode**
+   - The app will run without models for testing UI
+   - ML features will show placeholder results
 
 ### Firebase Setup (Optional)
 
