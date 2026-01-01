@@ -1,8 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:signsync/config/providers.dart';
 import 'package:signsync/models/noise_event.dart';
-import 'package:signsync/services/audio_service.dart';
 import 'package:signsync/services/permissions_service.dart';
 import 'package:signsync/core/logging/logger_service.dart';
 import 'package:signsync/core/theme/colors.dart';
@@ -10,7 +12,7 @@ import 'package:signsync/utils/constants.dart';
 
 /// Sound alerts screen for noise detection.
 ///
-/// This screen handles microphone input, noise detection, and
+/// This screen handles microphone input, real-time visualization, and
 /// alerting the user for important sounds.
 class SoundScreen extends ConsumerStatefulWidget {
   const SoundScreen({super.key});
@@ -20,9 +22,13 @@ class SoundScreen extends ConsumerStatefulWidget {
 }
 
 class _SoundScreenState extends ConsumerState<SoundScreen> {
-  bool _isListening = false;
-  final List<NoiseEvent> _recentEvents = [];
+  StreamSubscription<double>? _levelSub;
+  StreamSubscription<List<double>>? _waveformSub;
+  StreamSubscription<List<double>>? _spectrumSub;
+
   double _currentLevel = 0;
+  List<double> _waveform = const <double>[];
+  List<double> _spectrum = const <double>[];
 
   @override
   void initState() {
@@ -32,6 +38,20 @@ class _SoundScreenState extends ConsumerState<SoundScreen> {
 
   @override
   void dispose() {
+    final levelSub = _levelSub;
+    final waveformSub = _waveformSub;
+    final spectrumSub = _spectrumSub;
+
+    if (levelSub != null) {
+      unawaited(levelSub.cancel());
+    }
+    if (waveformSub != null) {
+      unawaited(waveformSub.cancel());
+    }
+    if (spectrumSub != null) {
+      unawaited(spectrumSub.cancel());
+    }
+
     super.dispose();
   }
 
@@ -41,8 +61,10 @@ class _SoundScreenState extends ConsumerState<SoundScreen> {
   }
 
   Future<void> _toggleListening() async {
-    if (_isListening) {
-      _stopListening();
+    final monitor = ref.read(soundMonitorProvider);
+
+    if (monitor.isMonitoring) {
+      await _stopListening();
     } else {
       await _startListening();
     }
@@ -58,18 +80,38 @@ class _SoundScreenState extends ConsumerState<SoundScreen> {
         await permissionsService.requestMicrophonePermission();
       }
 
-      final audioService = ref.read(audioServiceProvider);
-      await audioService.initialize();
-      await audioService.startRecording(onNoiseDetected: _onNoiseDetected);
+      final monitor = ref.read(soundMonitorProvider);
+      await monitor.start();
 
-      // Subscribe to audio levels
-      audioService.audioLevelStream.listen((level) {
-        if (mounted) {
-          setState(() => _currentLevel = level);
-        }
+      final levelSub = _levelSub;
+      final waveformSub = _waveformSub;
+      final spectrumSub = _spectrumSub;
+
+      if (levelSub != null) {
+        await levelSub.cancel();
+      }
+      if (waveformSub != null) {
+        await waveformSub.cancel();
+      }
+      if (spectrumSub != null) {
+        await spectrumSub.cancel();
+      }
+
+      _levelSub = monitor.audioLevelStream.listen((level) {
+        if (!mounted) return;
+        setState(() => _currentLevel = level);
       });
 
-      setState(() => _isListening = true);
+      _waveformSub = monitor.waveformStream.listen((waveform) {
+        if (!mounted) return;
+        setState(() => _waveform = waveform);
+      });
+
+      _spectrumSub = monitor.spectrumStream.listen((spectrum) {
+        if (!mounted) return;
+        setState(() => _spectrum = spectrum);
+      });
+
       LoggerService.info('Sound detection started');
     } catch (e, stack) {
       LoggerService.error('Failed to start sound detection', error: e, stack: stack);
@@ -77,66 +119,33 @@ class _SoundScreenState extends ConsumerState<SoundScreen> {
     }
   }
 
-  void _stopListening() {
+  Future<void> _stopListening() async {
     LoggerService.info('Stopping sound detection');
 
-    final audioService = ref.read(audioServiceProvider);
-    audioService.stopRecording();
+    final monitor = ref.read(soundMonitorProvider);
+    await monitor.stop();
 
-    setState(() => _isListening = false);
-  }
+    final levelSub = _levelSub;
+    final waveformSub = _waveformSub;
+    final spectrumSub = _spectrumSub;
 
-  void _onNoiseDetected(NoiseEvent event) {
-    setState(() {
-      _recentEvents.insert(0, event);
-      if (_recentEvents.length > 20) {
-        _recentEvents.removeLast();
-      }
-    });
-
-    // Show notification for significant events
-    if (event.shouldAlert) {
-      _showAlertNotification(event);
+    if (levelSub != null) {
+      await levelSub.cancel();
+    }
+    if (waveformSub != null) {
+      await waveformSub.cancel();
+    }
+    if (spectrumSub != null) {
+      await spectrumSub.cancel();
     }
 
-    LoggerService.debug('Noise detected: ${event.type.displayName}');
-  }
+    _levelSub = null;
+    _waveformSub = null;
+    _spectrumSub = null;
 
-  void _showAlertNotification(NoiseEvent event) {
-    if (!mounted) return;
-
-    final severityColor = event.severity.color;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(
-              event.type.icon,
-              color: severityColor,
-            ),
-            const SizedBox(width: AppConstants.spacingMd),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    event.type.displayName,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    'Intensity: ${(event.intensity * 100).toStringAsFixed(0)}%',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: severityColor.withOpacity(0.9),
-        duration: const Duration(seconds: 3),
-      ),
-    );
+    setState(() {
+      _currentLevel = 0;
+    });
   }
 
   void _showError(String message) {
@@ -151,6 +160,10 @@ class _SoundScreenState extends ConsumerState<SoundScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final monitor = ref.watch(soundMonitorProvider);
+    final config = ref.watch(appConfigProvider);
+    final events = monitor.events.reversed.toList(growable: false);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Sound Alerts'),
@@ -158,91 +171,105 @@ class _SoundScreenState extends ConsumerState<SoundScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
-            onPressed: () => Navigator.pushNamed(context, '/settings'),
+            onPressed: () => context.push('/settings'),
             tooltip: 'Sound Settings',
           ),
         ],
       ),
       body: Column(
         children: [
-          // Audio Visualization Area
           Expanded(
             flex: 2,
-            _buildAudioVisualization(),
+            child: _buildAudioVisualization(
+              isListening: monitor.isMonitoring,
+              alertThreshold: config.soundAlertThreshold,
+            ),
           ),
-
-          // Recent Events List
           Expanded(
-            flex: 2,
-            _buildEventsList(),
+            flex: 3,
+            child: _buildEventsList(events),
           ),
-
-          // Control Buttons
-          _buildControlBar(),
+          _buildControlBar(isListening: monitor.isMonitoring),
         ],
       ),
     );
   }
 
-  Widget _buildAudioVisualization() {
+  Widget _buildAudioVisualization({
+    required bool isListening,
+    required double alertThreshold,
+  }) {
     return Container(
       margin: const EdgeInsets.all(AppConstants.spacingMd),
+      padding: const EdgeInsets.all(AppConstants.spacingMd),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceVariant,
         borderRadius: BorderRadius.circular(AppConstants.radiusLg),
       ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Sound Wave Animation
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 100),
-            height: 100,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                5,
-                (index) => _buildSoundWaveBar(index),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  isListening ? 'Listening…' : 'Tap Start to monitor sounds',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
               ),
-            ),
-          ),
-          const SizedBox(height: AppConstants.spacingLg),
-          // Status Text
-          Text(
-            _isListening ? 'Listening for sounds...' : 'Tap Start to begin',
-            style: Theme.of(context).textTheme.bodyLarge,
+              Text(
+                '${(_currentLevel * 100).toStringAsFixed(0)}%',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: _currentLevel >= alertThreshold ? AppColors.warning : null,
+                    ),
+              ),
+            ],
           ),
           const SizedBox(height: AppConstants.spacingSm),
-          // Level Indicator
-          Text(
-            'Level: ${(_currentLevel * 100).toStringAsFixed(0)}%',
-            style: Theme.of(context).textTheme.bodySmall,
+          LinearProgressIndicator(
+            value: _currentLevel.clamp(0.0, 1.0),
+            minHeight: 6,
+            backgroundColor: Colors.black12,
+            valueColor: AlwaysStoppedAnimation<Color>(
+              _currentLevel >= alertThreshold ? AppColors.warning : Theme.of(context).colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: AppConstants.spacingMd),
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(
+                  child: _SignalCard(
+                    title: 'Waveform',
+                    child: CustomPaint(
+                      painter: WaveformPainter(
+                        waveform: _waveform,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppConstants.spacingMd),
+                Expanded(
+                  child: _SignalCard(
+                    title: 'Spectrum',
+                    child: CustomPaint(
+                      painter: SpectrumPainter(
+                        spectrum: _spectrum,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSoundWaveBar(int index) {
-    final double height = _isListening
-        ? (_currentLevel * 80 + 10) * (1 + index * 0.2)
-        : 10;
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 100),
-      width: 8,
-      height: height.clamp(10, 100),
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      decoration: BoxDecoration(
-        color: _currentLevel > 0.3
-            ? AppColors.warning
-            : Theme.of(context).colorScheme.primary,
-        borderRadius: BorderRadius.circular(4),
-      ),
-    );
-  }
-
-  Widget _buildEventsList() {
+  Widget _buildEventsList(List<NoiseEvent> events) {
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -259,7 +286,6 @@ class _SoundScreenState extends ConsumerState<SoundScreen> {
       ),
       child: Column(
         children: [
-          // Header
           Padding(
             padding: const EdgeInsets.all(AppConstants.spacingMd),
             child: Row(
@@ -269,20 +295,16 @@ class _SoundScreenState extends ConsumerState<SoundScreen> {
                   'Recent Events',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
-                if (_recentEvents.isNotEmpty)
+                if (events.isNotEmpty)
                   TextButton(
-                    onPressed: () {
-                      ref.read(audioServiceProvider).clearEvents();
-                      setState(() => _recentEvents.clear());
-                    },
+                    onPressed: () => ref.read(soundMonitorProvider).clearHistory(),
                     child: const Text('Clear'),
                   ),
               ],
             ),
           ),
-          // Events
           Expanded(
-            child: _recentEvents.isEmpty
+            child: events.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -301,9 +323,9 @@ class _SoundScreenState extends ConsumerState<SoundScreen> {
                     ),
                   )
                 : ListView.builder(
-                    itemCount: _recentEvents.length,
+                    itemCount: events.length,
                     itemBuilder: (context, index) {
-                      final event = _recentEvents[index];
+                      final event = events[index];
                       return _buildEventTile(event);
                     },
                   ),
@@ -316,50 +338,33 @@ class _SoundScreenState extends ConsumerState<SoundScreen> {
   Widget _buildEventTile(NoiseEvent event) {
     final time = event.timestamp.toIso8601String().split('T').last.substring(0, 8);
 
-    return Dismissible(
-      key: Key(event.id),
-      background: Container(
-        color: AppColors.error,
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: AppConstants.spacingMd),
-        child: const Icon(Icons.delete, color: Colors.white),
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(AppConstants.spacingXs),
+        decoration: BoxDecoration(
+          color: event.severity.color.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+        ),
+        child: Icon(
+          event.type.icon,
+          color: event.severity.color,
+        ),
       ),
-      onDismissed: (direction) {
-        setState(() => _recentEvents.remove(event));
-      },
-      child: ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(AppConstants.spacingXs),
-          decoration: BoxDecoration(
-            color: event.severity.color.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-          ),
-          child: Icon(
-            event.type.icon,
-            color: event.severity.color,
-          ),
-        ),
-        title: Text(event.type.displayName),
-        subtitle: Text(
-          '${event.intensity.toStringAsFixed(2)} intensity - $time',
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              event.severity.displayName,
-              style: TextStyle(
-                color: event.severity.color,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
+      title: Text(event.type.displayName),
+      subtitle: Text(
+        '${(event.intensity * 100).toStringAsFixed(0)}% • $time',
+      ),
+      trailing: Text(
+        event.severity.displayName,
+        style: TextStyle(
+          color: event.severity.color,
+          fontWeight: FontWeight.bold,
         ),
       ),
     );
   }
 
-  Widget _buildControlBar() {
+  Widget _buildControlBar({required bool isListening}) {
     return Container(
       padding: const EdgeInsets.all(AppConstants.spacingMd),
       child: Row(
@@ -367,76 +372,127 @@ class _SoundScreenState extends ConsumerState<SoundScreen> {
         children: [
           FilledButton.icon(
             onPressed: _toggleListening,
-            icon: Icon(_isListening ? Icons.stop : Icons.mic),
-            label: Text(_isListening ? 'Stop' : 'Start'),
+            icon: Icon(isListening ? Icons.stop : Icons.mic),
+            label: Text(isListening ? 'Stop' : 'Start'),
             style: FilledButton.styleFrom(
               minimumSize: const Size(120, 48),
-              backgroundColor: _isListening ? AppColors.error : null,
+              backgroundColor: isListening ? AppColors.error : null,
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.history),
-            onPressed: _showHistory,
-            tooltip: 'History',
+            icon: const Icon(Icons.mic_none),
+            onPressed: _checkPermissions,
+            tooltip: 'Request Microphone Permission',
             iconSize: AppConstants.iconSizeLg,
           ),
         ],
       ),
     );
   }
+}
 
-  void _showHistory() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.5,
-        minChildSize: 0.3,
-        maxChildSize: 0.8,
-        builder: (context, scrollController) => Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(AppConstants.radiusXl),
-            ),
+class _SignalCard extends StatelessWidget {
+  final String title;
+  final Widget child;
+
+  const _SignalCard({required this.title, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppConstants.spacingSm),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(context).textTheme.labelMedium,
           ),
-          child: Column(
-            children: [
-              const SizedBox(height: AppConstants.spacingMd),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.outline,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: AppConstants.spacingMd),
-              Text(
-                'Detection History',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: AppConstants.spacingMd),
-              Expanded(
-                child: ListView.builder(
-                  controller: scrollController,
-                  itemCount: _recentEvents.length,
-                  itemBuilder: (context, index) {
-                    final event = _recentEvents[index];
-                    return ListTile(
-                      leading: Icon(event.type.icon),
-                      title: Text(event.type.displayName),
-                      subtitle: Text(event.timestamp.relativeTime),
-                      trailing: Text(
-                        '${(event.intensity * 100).toStringAsFixed(0)}%',
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
+          const SizedBox(height: AppConstants.spacingSm),
+          Expanded(child: child),
+        ],
       ),
     );
+  }
+}
+
+/// Paints a waveform from normalized samples in [-1, 1].
+class WaveformPainter extends CustomPainter {
+  final List<double> waveform;
+  final Color color;
+
+  WaveformPainter({
+    required this.waveform,
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (waveform.length < 2) return;
+
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+
+    final path = Path();
+    final midY = size.height / 2;
+
+    for (int i = 0; i < waveform.length; i++) {
+      final x = (i / (waveform.length - 1)) * size.width;
+      final y = midY - waveform[i] * midY;
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant WaveformPainter oldDelegate) {
+    return oldDelegate.waveform != waveform || oldDelegate.color != color;
+  }
+}
+
+/// Paints a normalized spectrum as bars.
+class SpectrumPainter extends CustomPainter {
+  final List<double> spectrum;
+  final Color color;
+
+  SpectrumPainter({
+    required this.spectrum,
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (spectrum.isEmpty) return;
+
+    final paint = Paint()..color = color.withOpacity(0.85);
+    final barWidth = size.width / spectrum.length;
+
+    for (int i = 0; i < spectrum.length; i++) {
+      final mag = spectrum[i].clamp(0.0, 1.0);
+      final h = mag * size.height;
+      final rect = Rect.fromLTWH(
+        i * barWidth,
+        size.height - h,
+        barWidth * 0.9,
+        h,
+      );
+      canvas.drawRect(rect, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant SpectrumPainter oldDelegate) {
+    return oldDelegate.spectrum != spectrum || oldDelegate.color != color;
   }
 }

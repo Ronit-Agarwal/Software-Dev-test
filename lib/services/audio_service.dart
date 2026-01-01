@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'dart:io';
+import 'dart:math' as math;
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:signsync/core/error/exceptions.dart';
@@ -25,9 +26,19 @@ class AudioService with ChangeNotifier {
   String? get error => _error;
   List<NoiseEvent> get detectedEvents => _detectedEvents;
 
-  // Audio levels for visualization
+  double _alertThreshold = 0.3;
+
+  static const int _waveformSamples = 256;
+  static const int _spectrumBins = 48;
+
+  // Audio streams for visualization
   final _audioLevelController = StreamController<double>.broadcast();
+  final _waveformController = StreamController<List<double>>.broadcast();
+  final _spectrumController = StreamController<List<double>>.broadcast();
+
   Stream<double> get audioLevelStream => _audioLevelController.stream;
+  Stream<List<double>> get waveformStream => _waveformController.stream;
+  Stream<List<double>> get spectrumStream => _spectrumController.stream;
 
   /// Initializes the audio service.
   Future<void> initialize() async {
@@ -65,8 +76,10 @@ class AudioService with ChangeNotifier {
   /// Starts recording audio for sound detection.
   ///
   /// [onNoiseDetected] - Callback when a noise event is detected.
+  /// [alertThreshold] - Minimum RMS level required to emit a detection event.
   Future<void> startRecording({
     void Function(NoiseEvent event)? onNoiseDetected,
+    double alertThreshold = 0.3,
   }) async {
     if (!_isInitialized) {
       throw const AudioException('Audio service not initialized');
@@ -80,6 +93,7 @@ class AudioService with ChangeNotifier {
     try {
       LoggerService.info('Starting audio recording');
       _error = null;
+      _alertThreshold = alertThreshold.clamp(0.0, 1.0);
 
       // Configure the recorder
       await _recorder!.setSubscriptionDuration(const Duration(milliseconds: 100));
@@ -114,52 +128,174 @@ class AudioService with ChangeNotifier {
     Uint8List data,
     void Function(NoiseEvent event)? onNoiseDetected,
   ) {
-    // Calculate audio level from PCM16 data
-    double level = 0;
-    final buffer = Uint16List.view(data.buffer);
-    for (final sample in buffer) {
-      level += sample;
+    // Calculate audio level from PCM16 data.
+    // We use RMS to get a stable amplitude estimate.
+    final samples = Int16List.view(data.buffer);
+    if (samples.isEmpty) return;
+
+    double sumSq = 0.0;
+    for (final s in samples) {
+      final normalized = s / 32768.0;
+      sumSq += normalized * normalized;
     }
-    level = level / buffer.length / 32767.0;
-    
+
+    final level = math.sqrt(sumSq / samples.length).clamp(0.0, 1.0);
+
     // Emit level for visualization
     if (!_audioLevelController.isClosed) {
       _audioLevelController.add(level);
     }
 
-    // Detect noise events based on level threshold
-    if (level > 0.3) {
+    // Emit waveform and spectrum for visualization.
+    final waveform = _extractWaveform(samples);
+    if (!_waveformController.isClosed) {
+      _waveformController.add(waveform);
+    }
+
+    final spectrum = _computeSpectrum(waveform);
+    if (!_spectrumController.isClosed) {
+      _spectrumController.add(spectrum);
+    }
+
+    // Detect sound events based on threshold.
+    if (level > _alertThreshold) {
+      final zcr = _zeroCrossingRate(waveform);
+      final centroid = _spectralCentroid(spectrum);
+      final type = _classifyNoise(level: level, zcr: zcr, centroid: centroid);
+
       final event = NoiseEvent.fromAudio(
-        type: _classifyNoise(level),
-        intensity: level.clamp(0.0, 1.0),
+        type: type,
+        intensity: level,
+        alertThreshold: _alertThreshold,
+        metadata: {
+          'zcr': zcr,
+          'centroid': centroid,
+          'sampleRate': 16000,
+        },
       );
-      
+
       _detectedEvents.add(event);
+      if (_detectedEvents.length > 200) {
+        _detectedEvents.removeAt(0);
+      }
+
       onNoiseDetected?.call(event);
       notifyListeners();
 
-      LoggerService.debug('Noise detected: ${event.type.displayName} (intensity: ${event.intensity.toStringAsFixed(2)})');
+      LoggerService.debug(
+        'Noise detected: ${event.type.displayName} '
+        '(intensity: ${event.intensity.toStringAsFixed(2)})',
+      );
     }
   }
 
-  /// Classifies the noise type based on intensity and characteristics.
-  NoiseType _classifyNoise(double intensity) {
-    // In a real implementation, this would use ML for classification
-    // For now, we use simple heuristics
-    final random = (intensity * 10).toInt() % 5;
-    
-    switch (random) {
-      case 0:
-        return NoiseType.dogBark;
-      case 1:
-        return NoiseType.doorbell;
-      case 2:
-        return NoiseType.knock;
-      case 3:
-        return NoiseType.alarm;
-      default:
-        return NoiseType.custom;
+  List<double> _extractWaveform(Int16List samples) {
+    final step = math.max(1, samples.length ~/ _waveformSamples);
+    final out = <double>[];
+
+    for (int i = 0; i < samples.length && out.length < _waveformSamples; i += step) {
+      out.add((samples[i] / 32768.0).clamp(-1.0, 1.0));
     }
+
+    return out;
+  }
+
+  List<double> _computeSpectrum(List<double> waveform) {
+    if (waveform.isEmpty) return const <double>[];
+
+    final n = waveform.length;
+    final bins = math.min(_spectrumBins, n);
+    final magnitudes = List<double>.filled(bins, 0.0);
+
+    for (int k = 0; k < bins; k++) {
+      double re = 0.0;
+      double im = 0.0;
+
+      for (int t = 0; t < n; t++) {
+        final angle = 2 * math.pi * k * t / n;
+        re += waveform[t] * math.cos(angle);
+        im -= waveform[t] * math.sin(angle);
+      }
+
+      magnitudes[k] = math.sqrt(re * re + im * im) / n;
+    }
+
+    final maxMag = magnitudes.fold<double>(0.0, (m, v) => math.max(m, v));
+    if (maxMag <= 0) return magnitudes;
+
+    for (int i = 0; i < magnitudes.length; i++) {
+      magnitudes[i] = (magnitudes[i] / maxMag).clamp(0.0, 1.0);
+    }
+
+    return magnitudes;
+  }
+
+  double _zeroCrossingRate(List<double> waveform) {
+    if (waveform.length < 2) return 0.0;
+
+    int crossings = 0;
+    for (int i = 1; i < waveform.length; i++) {
+      final a = waveform[i - 1];
+      final b = waveform[i];
+      if ((a >= 0 && b < 0) || (a < 0 && b >= 0)) {
+        crossings++;
+      }
+    }
+
+    return crossings / (waveform.length - 1);
+  }
+
+  double _spectralCentroid(List<double> spectrum) {
+    if (spectrum.isEmpty) return 0.0;
+
+    double sum = 0.0;
+    double weighted = 0.0;
+
+    for (int i = 0; i < spectrum.length; i++) {
+      final mag = spectrum[i];
+      sum += mag;
+      weighted += i * mag;
+    }
+
+    if (sum <= 0) return 0.0;
+    return (weighted / sum) / (spectrum.length - 1);
+  }
+
+  /// Classifies the noise type based on simple audio features.
+  NoiseType _classifyNoise({
+    required double level,
+    required double zcr,
+    required double centroid,
+  }) {
+    if (level > 0.85 && centroid > 0.6) {
+      return NoiseType.alarm;
+    }
+
+    if (level > 0.75 && centroid > 0.5 && zcr > 0.08) {
+      return NoiseType.siren;
+    }
+
+    if (centroid < 0.18 && level > 0.35) {
+      return NoiseType.vehicle;
+    }
+
+    if (level > 0.55 && zcr < 0.05) {
+      return NoiseType.door;
+    }
+
+    if (level > 0.5 && zcr > 0.18 && centroid < 0.35) {
+      return NoiseType.knock;
+    }
+
+    if (centroid > 0.35 && centroid < 0.7 && level > 0.25) {
+      return NoiseType.speech;
+    }
+
+    if (centroid > 0.55 && level > 0.35) {
+      return NoiseType.doorbell;
+    }
+
+    return NoiseType.custom;
   }
 
   /// Stops recording audio.
@@ -230,14 +366,14 @@ class AudioService with ChangeNotifier {
   }
 
   /// Cleans up audio resources.
-  Future<void> dispose() async {
+  Future<void> disposeAsync() async {
     LoggerService.info('Disposing audio service');
-    
+
     await _audioSubscription?.cancel();
     _audioSubscription = null;
 
     if (_isRecording) {
-      await _recorder!.stopRecorder();
+      await _recorder?.stopRecorder();
     }
 
     await _recorder?.closeAudioSession();
@@ -247,9 +383,16 @@ class AudioService with ChangeNotifier {
     _player = null;
     _isInitialized = false;
     _isRecording = false;
-    
+
     await _audioLevelController.close();
-    notifyListeners();
+    await _waveformController.close();
+    await _spectrumController.close();
+  }
+
+  @override
+  void dispose() {
+    unawaited(disposeAsync());
+    super.dispose();
   }
 }
 

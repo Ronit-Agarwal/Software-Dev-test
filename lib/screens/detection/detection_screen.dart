@@ -1,6 +1,10 @@
+import 'dart:async';
+
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:signsync/config/providers.dart';
+import 'package:signsync/models/app_mode.dart';
 import 'package:signsync/models/camera_state.dart';
 import 'package:signsync/models/detected_object.dart';
 import 'package:signsync/services/camera_service.dart';
@@ -24,7 +28,7 @@ class DetectionScreen extends ConsumerStatefulWidget {
 class _DetectionScreenState extends ConsumerState<DetectionScreen> {
   bool _isProcessing = false;
   DetectionFrame? _currentFrame;
-  final List<DetectedObject> _recentObjects = [];
+  List<DetectedObject> _recentObjects = [];
 
   @override
   void initState() {
@@ -90,7 +94,7 @@ class _DetectionScreenState extends ConsumerState<DetectionScreen> {
     setState(() => _isProcessing = false);
   }
 
-  void _processFrame(dynamic image) async {
+  void _processFrame(CameraImage image) async {
     if (!_isProcessing) return;
 
     try {
@@ -107,6 +111,16 @@ class _DetectionScreenState extends ConsumerState<DetectionScreen> {
         if (_recentObjects.isNotEmpty) {
           AnalyticsEvent.logObjectDetectionStopped(
             objectCount: _recentObjects.length,
+          );
+
+          unawaited(
+            ref.read(audioAlertServiceProvider).handleDetectionFrame(
+                  frame,
+                  frameSize: Size(
+                    image.width.toDouble(),
+                    image.height.toDouble(),
+                  ),
+                ),
           );
         }
       }
