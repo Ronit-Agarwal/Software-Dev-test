@@ -1,12 +1,13 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:signsync/config/app_config.dart';
 import 'package:signsync/core/navigation/route_guards.dart';
 import 'package:signsync/core/logging/logger_service.dart';
 import 'package:signsync/screens/home/home_screen.dart';
 import 'package:signsync/screens/translation/translation_screen.dart';
+import 'package:signsync/screens/translation/english_to_asl_screen.dart';
 import 'package:signsync/screens/detection/detection_screen.dart';
 import 'package:signsync/screens/chat/chat_screen.dart';
 import 'package:signsync/screens/settings/settings_screen.dart';
@@ -37,6 +38,7 @@ class AppRouter {
       path: '/',
       name: 'home',
       pageBuilder: (context, state) => _buildPage(
+        context,
         const HomeScreen(),
         state: state,
         screenName: 'Home',
@@ -46,15 +48,27 @@ class AppRouter {
       path: '/translation',
       name: 'translation',
       pageBuilder: (context, state) => _buildPage(
+        context,
         const TranslationScreen(),
         state: state,
         screenName: 'ASL Translation',
       ),
     ),
     GoRoute(
+      path: '/english-to-asl',
+      name: 'englishToAsl',
+      pageBuilder: (context, state) => _buildPage(
+        context,
+        const EnglishToAslScreen(),
+        state: state,
+        screenName: 'English to ASL',
+      ),
+    ),
+    GoRoute(
       path: '/detection',
       name: 'detection',
       pageBuilder: (context, state) => _buildPage(
+        context,
         const DetectionScreen(),
         state: state,
         screenName: 'Object Detection',
@@ -64,6 +78,7 @@ class AppRouter {
       path: '/sound',
       name: 'sound',
       pageBuilder: (context, state) => _buildPage(
+        context,
         const SoundScreen(),
         state: state,
         screenName: 'Sound Alerts',
@@ -73,6 +88,7 @@ class AppRouter {
       path: '/chat',
       name: 'chat',
       pageBuilder: (context, state) => _buildPage(
+        context,
         const ChatScreen(),
         state: state,
         screenName: 'AI Chat',
@@ -82,6 +98,7 @@ class AppRouter {
       path: '/settings',
       name: 'settings',
       pageBuilder: (context, state) => _buildPage(
+        context,
         const SettingsScreen(),
         state: state,
         screenName: 'Settings',
@@ -94,7 +111,7 @@ class AppRouter {
     BuildContext context,
     GoRouterState state,
   ) {
-    final location = state.location;
+    final location = state.uri.toString();
 
     // Redirect from root to translation
     if (location == '/') {
@@ -120,7 +137,7 @@ class AppRouter {
     LoggerService.error(
       'Router exception',
       error: error,
-      extra: {'location': state.location},
+      extra: {'location': state.uri.toString()},
     );
 
     // Navigate to error page
@@ -129,6 +146,7 @@ class AppRouter {
 
   /// Builds a page with common configuration.
   static Page _buildPage(
+    BuildContext context,
     Widget screen, {
     required GoRouterState state,
     required String screenName,
@@ -173,7 +191,7 @@ class AppRouter {
     LoggerService.error(
       'Route error',
       error: error,
-      stackTrace: error?.stackTrace,
+      stackTrace: error is Error ? error.stackTrace : null,
     );
 
     return MaterialPage<void>(
@@ -195,7 +213,7 @@ class AppRouter {
               ),
               const SizedBox(height: 8),
               Text(
-                state.error?.message ?? 'An unexpected error occurred',
+                state.error?.toString() ?? 'An unexpected error occurred',
                 style: Theme.of(context).textTheme.bodyMedium,
                 textAlign: TextAlign.center,
               ),
@@ -209,7 +227,7 @@ class AppRouter {
         ),
       ),
     );
-  }
+
 
   /// Navigates to a route with optional parameters.
   static void navigate(

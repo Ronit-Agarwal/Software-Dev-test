@@ -13,8 +13,8 @@ Future<String?> cameraPermissionGuard(
 ) async {
   final permissionsService = PermissionsService();
   
-  if (!await permissionsService.hasCameraPermission) {
-    return '/permission?reason=camera&redirect=${Uri.encodeComponent(state.location)}';
+  if (!permissionsService.hasCameraPermission) {
+    return '/permission?reason=camera&redirect=${Uri.encodeComponent(state.uri.toString())}';
   }
   
   return null;
@@ -27,8 +27,8 @@ Future<String?> microphonePermissionGuard(
 ) async {
   final permissionsService = PermissionsService();
   
-  if (!await permissionsService.hasMicrophonePermission) {
-    return '/permission?reason=microphone&redirect=${Uri.encodeComponent(state.location)}';
+  if (!permissionsService.hasMicrophonePermission) {
+    return '/permission?reason=microphone&redirect=${Uri.encodeComponent(state.uri.toString())}';
   }
   
   return null;
@@ -42,7 +42,7 @@ Future<String?> requiredPermissionsGuard(
   final permissionsService = PermissionsService();
   
   if (!permissionsService.allPermissionsGranted) {
-    return '/permission?reason=all&redirect=${Uri.encodeComponent(state.location)}';
+    return '/permission?reason=all&redirect=${Uri.encodeComponent(state.uri.toString())}';
   }
   
   return null;
@@ -129,10 +129,11 @@ extension GoRouteGuards on GoRoute {
       path: path,
       name: name,
       pageBuilder: pageBuilder,
-      routes: routes.map((r) => r.withGuard(guard)).toList(),
+      routes: routes.map((r) => r is GoRoute ? r.withGuard(guard) : r).toList(),
       redirect: (context, state) async {
-        final routeRedirect = redirect?.call(context, state);
-        if (routeRedirect != null) return routeRedirect;
+        final rr = redirect?.call(context, state);
+        final resolved = rr is Future<String?> ? await rr : rr;
+        if (resolved != null) return resolved;
         return await guard(context, state);
       },
     );
@@ -146,11 +147,12 @@ extension GoRouteGuards on GoRoute {
       path: path,
       name: name,
       pageBuilder: pageBuilder,
-      routes: routes.map((r) => r.withGuards(guards)).toList(),
+      routes: routes.map((r) => r is GoRoute ? r.withGuards(guards) : r).toList(),
       redirect: (context, state) async {
-        final routeRedirect = redirect?.call(context, state);
-        if (routeRedirect != null) return routeRedirect;
-        
+        final rr = redirect?.call(context, state);
+        final resolved = rr is Future<String?> ? await rr : rr;
+        if (resolved != null) return resolved;
+
         for (final guard in guards) {
           final result = await guard(context, state);
           if (result != null) return result;

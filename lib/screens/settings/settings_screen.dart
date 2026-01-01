@@ -68,10 +68,76 @@ class SettingsScreen extends ConsumerWidget {
           ),
           _buildSwitchTile(
             title: 'Haptic Feedback',
-            subtitle: 'Vibrate on actions',
-            value: true,
-            onChanged: (value) {},
+            subtitle: 'Vibrate on important alerts and actions',
+            value: config.hapticFeedbackEnabled,
+            onChanged: (value) {
+              ref.read(appConfigProvider).hapticFeedbackEnabled = value;
+            },
             icon: Icons.vibration,
+          ),
+          const Divider(),
+
+          // Audio & Alerts
+          _buildSectionHeader('Audio & Alerts'),
+          _buildSwitchTile(
+            title: 'Text-to-Speech',
+            subtitle: 'Speak important alerts out loud',
+            value: config.ttsEnabled,
+            onChanged: (value) {
+              ref.read(appConfigProvider).ttsEnabled = value;
+            },
+            icon: Icons.volume_up,
+          ),
+          _buildSliderTile(
+            title: 'TTS Volume',
+            subtitle: 'Volume: ${(config.ttsVolume * 100).toStringAsFixed(0)}%',
+            value: config.ttsVolume,
+            min: 0.0,
+            max: 1.0,
+            onChanged: (value) {
+              ref.read(appConfigProvider).ttsVolume = value;
+            },
+            icon: Icons.volume_down,
+          ),
+          _buildSliderTile(
+            title: 'TTS Rate',
+            subtitle: 'Speech rate: ${(config.ttsRate * 100).toStringAsFixed(0)}%',
+            value: config.ttsRate,
+            min: 0.0,
+            max: 1.0,
+            onChanged: (value) {
+              ref.read(appConfigProvider).ttsRate = value;
+            },
+            icon: Icons.speed,
+          ),
+          _buildSwitchTile(
+            title: 'Spatial Cues',
+            subtitle: 'Include left/right/ahead in spoken alerts',
+            value: config.spatialCuesEnabled,
+            onChanged: (value) {
+              ref.read(appConfigProvider).spatialCuesEnabled = value;
+            },
+            icon: Icons.explore,
+          ),
+          _buildSwitchTile(
+            title: 'Object Audio Alerts',
+            subtitle: 'Speak object detection results',
+            value: config.objectAudioAlertsEnabled,
+            onChanged: (value) {
+              ref.read(appConfigProvider).objectAudioAlertsEnabled = value;
+            },
+            icon: Icons.visibility,
+          ),
+          _buildSliderTile(
+            title: 'Sound Alert Sensitivity',
+            subtitle: 'Threshold: ${(config.soundAlertThreshold * 100).toStringAsFixed(0)}%',
+            value: config.soundAlertThreshold,
+            min: 0.05,
+            max: 0.95,
+            onChanged: (value) {
+              ref.read(appConfigProvider).soundAlertThreshold = value;
+            },
+            icon: Icons.mic,
           ),
           const Divider(),
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:signsync/config/providers.dart';
@@ -103,6 +105,9 @@ class _DetectionScreenState extends ConsumerState<DetectionScreen> {
           _currentFrame = frame;
           _recentObjects = frame.objects;
         });
+
+        // Real-time audio alerts (Task 6)
+        unawaited(ref.read(objectAudioAlertServiceProvider).handleDetectionFrame(frame));
 
         if (_recentObjects.isNotEmpty) {
           AnalyticsEvent.logObjectDetectionStopped(

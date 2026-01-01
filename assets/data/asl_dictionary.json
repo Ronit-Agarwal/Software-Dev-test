@@ -1,0 +1,2247 @@
+{
+  "count": 560,
+  "entries": {
+    "after": {
+      "gloss": "AFTER",
+      "lemma": "after"
+    },
+    "afternoon": {
+      "gloss": "AFTERNOON",
+      "lemma": "afternoon"
+    },
+    "again": {
+      "gloss": "AGAIN",
+      "lemma": "again"
+    },
+    "ahead": {
+      "gloss": "AHEAD",
+      "lemma": "ahead"
+    },
+    "airplane": {
+      "gloss": "AIRPLANE",
+      "lemma": "airplane"
+    },
+    "alarm": {
+      "gloss": "ALARM",
+      "lemma": "alarm"
+    },
+    "always": {
+      "gloss": "ALWAYS",
+      "lemma": "always"
+    },
+    "ambulance": {
+      "gloss": "AMBULANCE",
+      "lemma": "ambulance"
+    },
+    "and": {
+      "gloss": "AND",
+      "lemma": "and"
+    },
+    "angry": {
+      "gloss": "ANGRY",
+      "lemma": "angry"
+    },
+    "apple": {
+      "gloss": "APPLE",
+      "lemma": "apple"
+    },
+    "april": {
+      "gloss": "APRIL",
+      "lemma": "april"
+    },
+    "august": {
+      "gloss": "AUGUST",
+      "lemma": "august"
+    },
+    "baby": {
+      "gloss": "BABY",
+      "lemma": "baby"
+    },
+    "backpack": {
+      "gloss": "BACKPACK",
+      "lemma": "backpack"
+    },
+    "bad": {
+      "gloss": "BAD",
+      "lemma": "bad"
+    },
+    "banana": {
+      "gloss": "BANANA",
+      "lemma": "banana"
+    },
+    "baseball bat": {
+      "gloss": "BASEBALL-BAT",
+      "lemma": "baseball bat"
+    },
+    "baseball glove": {
+      "gloss": "BASEBALL-GLOVE",
+      "lemma": "baseball glove"
+    },
+    "bathroom": {
+      "gloss": "BATHROOM",
+      "lemma": "bathroom"
+    },
+    "bear": {
+      "gloss": "BEAR",
+      "lemma": "bear"
+    },
+    "because": {
+      "gloss": "BECAUSE",
+      "lemma": "because"
+    },
+    "bed": {
+      "gloss": "BED",
+      "lemma": "bed"
+    },
+    "before": {
+      "gloss": "BEFORE",
+      "lemma": "before"
+    },
+    "behind": {
+      "gloss": "BEHIND",
+      "lemma": "behind"
+    },
+    "bench": {
+      "gloss": "BENCH",
+      "lemma": "bench"
+    },
+    "bicycle": {
+      "gloss": "BICYCLE",
+      "lemma": "bicycle"
+    },
+    "big": {
+      "gloss": "BIG",
+      "lemma": "big"
+    },
+    "bike": {
+      "gloss": "BIKE",
+      "lemma": "bike"
+    },
+    "bird": {
+      "gloss": "BIRD",
+      "lemma": "bird"
+    },
+    "black": {
+      "gloss": "BLACK",
+      "lemma": "black"
+    },
+    "blue": {
+      "gloss": "BLUE",
+      "lemma": "blue"
+    },
+    "boat": {
+      "gloss": "BOAT",
+      "lemma": "boat"
+    },
+    "book": {
+      "gloss": "BOOK",
+      "lemma": "book"
+    },
+    "bottle": {
+      "gloss": "BOTTLE",
+      "lemma": "bottle"
+    },
+    "bowl": {
+      "gloss": "BOWL",
+      "lemma": "bowl"
+    },
+    "broccoli": {
+      "gloss": "BROCCOLI",
+      "lemma": "broccoli"
+    },
+    "brother": {
+      "gloss": "BROTHER",
+      "lemma": "brother"
+    },
+    "brown": {
+      "gloss": "BROWN",
+      "lemma": "brown"
+    },
+    "bus": {
+      "gloss": "BUS",
+      "lemma": "bus"
+    },
+    "but": {
+      "gloss": "BUT",
+      "lemma": "but"
+    },
+    "bye": {
+      "gloss": "GOODBYE",
+      "lemma": "goodbye"
+    },
+    "cake": {
+      "gloss": "CAKE",
+      "lemma": "cake"
+    },
+    "call me": {
+      "gloss": "CALL-ME",
+      "lemma": "call me"
+    },
+    "called": {
+      "gloss": "CALL",
+      "lemma": "call"
+    },
+    "calling": {
+      "gloss": "CALL",
+      "lemma": "call"
+    },
+    "calls": {
+      "gloss": "CALL",
+      "lemma": "call"
+    },
+    "camera": {
+      "gloss": "CAMERA",
+      "lemma": "camera"
+    },
+    "car": {
+      "gloss": "CAR",
+      "lemma": "car"
+    },
+    "carrot": {
+      "gloss": "CARROT",
+      "lemma": "carrot"
+    },
+    "cat": {
+      "gloss": "CAT",
+      "lemma": "cat"
+    },
+    "cell phone": {
+      "gloss": "CELL-PHONE",
+      "lemma": "cell phone"
+    },
+    "chair": {
+      "gloss": "CHAIR",
+      "lemma": "chair"
+    },
+    "child": {
+      "gloss": "CHILD",
+      "lemma": "child"
+    },
+    "clock": {
+      "gloss": "CLOCK",
+      "lemma": "clock"
+    },
+    "close": {
+      "gloss": "CLOSE",
+      "lemma": "close"
+    },
+    "coffee": {
+      "gloss": "COFFEE",
+      "lemma": "coffee"
+    },
+    "cold": {
+      "gloss": "COLD",
+      "lemma": "cold"
+    },
+    "color": {
+      "gloss": "COLOR",
+      "lemma": "color"
+    },
+    "come": {
+      "gloss": "COME",
+      "lemma": "come"
+    },
+    "comeed": {
+      "gloss": "COME",
+      "lemma": "come"
+    },
+    "comeing": {
+      "gloss": "COME",
+      "lemma": "come"
+    },
+    "comes": {
+      "gloss": "COME",
+      "lemma": "come"
+    },
+    "computer": {
+      "gloss": "COMPUTER",
+      "lemma": "computer"
+    },
+    "couch": {
+      "gloss": "COUCH",
+      "lemma": "couch"
+    },
+    "cow": {
+      "gloss": "COW",
+      "lemma": "cow"
+    },
+    "cup": {
+      "gloss": "CUP",
+      "lemma": "cup"
+    },
+    "danger": {
+      "gloss": "DANGER",
+      "lemma": "danger"
+    },
+    "day": {
+      "gloss": "DAY",
+      "lemma": "day"
+    },
+    "december": {
+      "gloss": "DECEMBER",
+      "lemma": "december"
+    },
+    "dining table": {
+      "gloss": "DINING-TABLE",
+      "lemma": "dining table"
+    },
+    "dog": {
+      "gloss": "DOG",
+      "lemma": "dog"
+    },
+    "donut": {
+      "gloss": "DONUT",
+      "lemma": "donut"
+    },
+    "door": {
+      "gloss": "DOOR",
+      "lemma": "door"
+    },
+    "down": {
+      "gloss": "DOWN",
+      "lemma": "down"
+    },
+    "drink": {
+      "gloss": "DRINK",
+      "lemma": "drink"
+    },
+    "drinked": {
+      "gloss": "DRINK",
+      "lemma": "drink"
+    },
+    "drinking": {
+      "gloss": "DRINK",
+      "lemma": "drink"
+    },
+    "drinks": {
+      "gloss": "DRINK",
+      "lemma": "drink"
+    },
+    "eat": {
+      "gloss": "EAT",
+      "lemma": "eat"
+    },
+    "eated": {
+      "gloss": "EAT",
+      "lemma": "eat"
+    },
+    "eating": {
+      "gloss": "EAT",
+      "lemma": "eat"
+    },
+    "eats": {
+      "gloss": "EAT",
+      "lemma": "eat"
+    },
+    "eight": {
+      "gloss": "EIGHT",
+      "lemma": "eight"
+    },
+    "eighteen": {
+      "gloss": "EIGHTEEN",
+      "lemma": "eighteen"
+    },
+    "elephant": {
+      "gloss": "ELEPHANT",
+      "lemma": "elephant"
+    },
+    "eleven": {
+      "gloss": "ELEVEN",
+      "lemma": "eleven"
+    },
+    "evening": {
+      "gloss": "EVENING",
+      "lemma": "evening"
+    },
+    "excuse me": {
+      "gloss": "EXCUSE-ME",
+      "lemma": "excuse me"
+    },
+    "family": {
+      "gloss": "FAMILY",
+      "lemma": "family"
+    },
+    "far": {
+      "gloss": "FAR",
+      "lemma": "far"
+    },
+    "fast": {
+      "gloss": "FAST",
+      "lemma": "fast"
+    },
+    "father": {
+      "gloss": "FATHER",
+      "lemma": "father"
+    },
+    "february": {
+      "gloss": "FEBRUARY",
+      "lemma": "february"
+    },
+    "fifteen": {
+      "gloss": "FIFTEEN",
+      "lemma": "fifteen"
+    },
+    "fire": {
+      "gloss": "FIRE",
+      "lemma": "fire"
+    },
+    "fire hydrant": {
+      "gloss": "FIRE-HYDRANT",
+      "lemma": "fire hydrant"
+    },
+    "five": {
+      "gloss": "FIVE",
+      "lemma": "five"
+    },
+    "food": {
+      "gloss": "FOOD",
+      "lemma": "food"
+    },
+    "fork": {
+      "gloss": "FORK",
+      "lemma": "fork"
+    },
+    "four": {
+      "gloss": "FOUR",
+      "lemma": "four"
+    },
+    "fourteen": {
+      "gloss": "FOURTEEN",
+      "lemma": "fourteen"
+    },
+    "friday": {
+      "gloss": "FRIDAY",
+      "lemma": "friday"
+    },
+    "friend": {
+      "gloss": "FRIEND",
+      "lemma": "friend"
+    },
+    "frisbee": {
+      "gloss": "FRISBEE",
+      "lemma": "frisbee"
+    },
+    "giraffe": {
+      "gloss": "GIRAFFE",
+      "lemma": "giraffe"
+    },
+    "go": {
+      "gloss": "GO",
+      "lemma": "go"
+    },
+    "goed": {
+      "gloss": "GO",
+      "lemma": "go"
+    },
+    "going": {
+      "gloss": "GO",
+      "lemma": "go"
+    },
+    "good": {
+      "gloss": "GOOD",
+      "lemma": "good"
+    },
+    "good morning": {
+      "gloss": "GOOD-MORNING",
+      "lemma": "good morning"
+    },
+    "good night": {
+      "gloss": "GOOD-NIGHT",
+      "lemma": "good night"
+    },
+    "goodbye": {
+      "gloss": "GOODBYE",
+      "lemma": "goodbye"
+    },
+    "gos": {
+      "gloss": "GO",
+      "lemma": "go"
+    },
+    "gray": {
+      "gloss": "GRAY",
+      "lemma": "gray"
+    },
+    "green": {
+      "gloss": "GREEN",
+      "lemma": "green"
+    },
+    "hair drier": {
+      "gloss": "HAIR-DRIER",
+      "lemma": "hair drier"
+    },
+    "handbag": {
+      "gloss": "HANDBAG",
+      "lemma": "handbag"
+    },
+    "happy": {
+      "gloss": "HAPPY",
+      "lemma": "happy"
+    },
+    "hate": {
+      "gloss": "HATE",
+      "lemma": "hate"
+    },
+    "hateed": {
+      "gloss": "HATE",
+      "lemma": "hate"
+    },
+    "hateing": {
+      "gloss": "HATE",
+      "lemma": "hate"
+    },
+    "hates": {
+      "gloss": "HATE",
+      "lemma": "hate"
+    },
+    "he": {
+      "gloss": "HE",
+      "lemma": "he"
+    },
+    "hear": {
+      "gloss": "HEAR",
+      "lemma": "hear"
+    },
+    "hello": {
+      "gloss": "HELLO",
+      "lemma": "hello"
+    },
+    "help": {
+      "gloss": "HELP",
+      "lemma": "help"
+    },
+    "help me": {
+      "gloss": "HELP",
+      "lemma": "help me"
+    },
+    "helped": {
+      "gloss": "HELP",
+      "lemma": "help"
+    },
+    "helping": {
+      "gloss": "HELP",
+      "lemma": "help"
+    },
+    "helps": {
+      "gloss": "HELP",
+      "lemma": "help"
+    },
+    "here": {
+      "gloss": "HERE",
+      "lemma": "here"
+    },
+    "hi": {
+      "gloss": "HELLO",
+      "lemma": "hello"
+    },
+    "home": {
+      "gloss": "HOME",
+      "lemma": "home"
+    },
+    "horse": {
+      "gloss": "HORSE",
+      "lemma": "horse"
+    },
+    "hot": {
+      "gloss": "HOT",
+      "lemma": "hot"
+    },
+    "hot dog": {
+      "gloss": "HOT-DOG",
+      "lemma": "hot dog"
+    },
+    "how": {
+      "gloss": "HOW",
+      "lemma": "how"
+    },
+    "how are you": {
+      "gloss": "HOW-YOU",
+      "lemma": "how are you"
+    },
+    "hungry": {
+      "gloss": "HUNGRY",
+      "lemma": "hungry"
+    },
+    "hurt": {
+      "gloss": "HURT",
+      "lemma": "hurt"
+    },
+    "i": {
+      "gloss": "I",
+      "lemma": "i"
+    },
+    "i come bathroom": {
+      "gloss": "I-COME-BATHROOM",
+      "lemma": "i come bathroom"
+    },
+    "i come coffee": {
+      "gloss": "I-COME-COFFEE",
+      "lemma": "i come coffee"
+    },
+    "i come food": {
+      "gloss": "I-COME-FOOD",
+      "lemma": "i come food"
+    },
+    "i come home": {
+      "gloss": "I-COME-HOME",
+      "lemma": "i come home"
+    },
+    "i come now": {
+      "gloss": "I-COME-NOW",
+      "lemma": "i come now"
+    },
+    "i come school": {
+      "gloss": "I-COME-SCHOOL",
+      "lemma": "i come school"
+    },
+    "i come tea": {
+      "gloss": "I-COME-TEA",
+      "lemma": "i come tea"
+    },
+    "i come today": {
+      "gloss": "I-COME-TODAY",
+      "lemma": "i come today"
+    },
+    "i come tomorrow": {
+      "gloss": "I-COME-TOMORROW",
+      "lemma": "i come tomorrow"
+    },
+    "i come water": {
+      "gloss": "I-COME-WATER",
+      "lemma": "i come water"
+    },
+    "i come work": {
+      "gloss": "I-COME-WORK",
+      "lemma": "i come work"
+    },
+    "i drink bathroom": {
+      "gloss": "I-DRINK-BATHROOM",
+      "lemma": "i drink bathroom"
+    },
+    "i drink coffee": {
+      "gloss": "I-DRINK-COFFEE",
+      "lemma": "i drink coffee"
+    },
+    "i drink food": {
+      "gloss": "I-DRINK-FOOD",
+      "lemma": "i drink food"
+    },
+    "i drink home": {
+      "gloss": "I-DRINK-HOME",
+      "lemma": "i drink home"
+    },
+    "i drink now": {
+      "gloss": "I-DRINK-NOW",
+      "lemma": "i drink now"
+    },
+    "i drink school": {
+      "gloss": "I-DRINK-SCHOOL",
+      "lemma": "i drink school"
+    },
+    "i drink tea": {
+      "gloss": "I-DRINK-TEA",
+      "lemma": "i drink tea"
+    },
+    "i drink today": {
+      "gloss": "I-DRINK-TODAY",
+      "lemma": "i drink today"
+    },
+    "i drink tomorrow": {
+      "gloss": "I-DRINK-TOMORROW",
+      "lemma": "i drink tomorrow"
+    },
+    "i drink water": {
+      "gloss": "I-DRINK-WATER",
+      "lemma": "i drink water"
+    },
+    "i drink work": {
+      "gloss": "I-DRINK-WORK",
+      "lemma": "i drink work"
+    },
+    "i eat bathroom": {
+      "gloss": "I-EAT-BATHROOM",
+      "lemma": "i eat bathroom"
+    },
+    "i eat coffee": {
+      "gloss": "I-EAT-COFFEE",
+      "lemma": "i eat coffee"
+    },
+    "i eat food": {
+      "gloss": "I-EAT-FOOD",
+      "lemma": "i eat food"
+    },
+    "i eat home": {
+      "gloss": "I-EAT-HOME",
+      "lemma": "i eat home"
+    },
+    "i eat now": {
+      "gloss": "I-EAT-NOW",
+      "lemma": "i eat now"
+    },
+    "i eat school": {
+      "gloss": "I-EAT-SCHOOL",
+      "lemma": "i eat school"
+    },
+    "i eat tea": {
+      "gloss": "I-EAT-TEA",
+      "lemma": "i eat tea"
+    },
+    "i eat today": {
+      "gloss": "I-EAT-TODAY",
+      "lemma": "i eat today"
+    },
+    "i eat tomorrow": {
+      "gloss": "I-EAT-TOMORROW",
+      "lemma": "i eat tomorrow"
+    },
+    "i eat water": {
+      "gloss": "I-EAT-WATER",
+      "lemma": "i eat water"
+    },
+    "i eat work": {
+      "gloss": "I-EAT-WORK",
+      "lemma": "i eat work"
+    },
+    "i go bathroom": {
+      "gloss": "I-GO-BATHROOM",
+      "lemma": "i go bathroom"
+    },
+    "i go coffee": {
+      "gloss": "I-GO-COFFEE",
+      "lemma": "i go coffee"
+    },
+    "i go food": {
+      "gloss": "I-GO-FOOD",
+      "lemma": "i go food"
+    },
+    "i go home": {
+      "gloss": "I-GO-HOME",
+      "lemma": "i go home"
+    },
+    "i go now": {
+      "gloss": "I-GO-NOW",
+      "lemma": "i go now"
+    },
+    "i go school": {
+      "gloss": "I-GO-SCHOOL",
+      "lemma": "i go school"
+    },
+    "i go tea": {
+      "gloss": "I-GO-TEA",
+      "lemma": "i go tea"
+    },
+    "i go today": {
+      "gloss": "I-GO-TODAY",
+      "lemma": "i go today"
+    },
+    "i go tomorrow": {
+      "gloss": "I-GO-TOMORROW",
+      "lemma": "i go tomorrow"
+    },
+    "i go water": {
+      "gloss": "I-GO-WATER",
+      "lemma": "i go water"
+    },
+    "i go work": {
+      "gloss": "I-GO-WORK",
+      "lemma": "i go work"
+    },
+    "i help bathroom": {
+      "gloss": "I-HELP-BATHROOM",
+      "lemma": "i help bathroom"
+    },
+    "i help coffee": {
+      "gloss": "I-HELP-COFFEE",
+      "lemma": "i help coffee"
+    },
+    "i help food": {
+      "gloss": "I-HELP-FOOD",
+      "lemma": "i help food"
+    },
+    "i help home": {
+      "gloss": "I-HELP-HOME",
+      "lemma": "i help home"
+    },
+    "i help now": {
+      "gloss": "I-HELP-NOW",
+      "lemma": "i help now"
+    },
+    "i help school": {
+      "gloss": "I-HELP-SCHOOL",
+      "lemma": "i help school"
+    },
+    "i help tea": {
+      "gloss": "I-HELP-TEA",
+      "lemma": "i help tea"
+    },
+    "i help today": {
+      "gloss": "I-HELP-TODAY",
+      "lemma": "i help today"
+    },
+    "i help tomorrow": {
+      "gloss": "I-HELP-TOMORROW",
+      "lemma": "i help tomorrow"
+    },
+    "i help water": {
+      "gloss": "I-HELP-WATER",
+      "lemma": "i help water"
+    },
+    "i help work": {
+      "gloss": "I-HELP-WORK",
+      "lemma": "i help work"
+    },
+    "i learn bathroom": {
+      "gloss": "I-LEARN-BATHROOM",
+      "lemma": "i learn bathroom"
+    },
+    "i learn coffee": {
+      "gloss": "I-LEARN-COFFEE",
+      "lemma": "i learn coffee"
+    },
+    "i learn food": {
+      "gloss": "I-LEARN-FOOD",
+      "lemma": "i learn food"
+    },
+    "i learn home": {
+      "gloss": "I-LEARN-HOME",
+      "lemma": "i learn home"
+    },
+    "i learn now": {
+      "gloss": "I-LEARN-NOW",
+      "lemma": "i learn now"
+    },
+    "i learn school": {
+      "gloss": "I-LEARN-SCHOOL",
+      "lemma": "i learn school"
+    },
+    "i learn tea": {
+      "gloss": "I-LEARN-TEA",
+      "lemma": "i learn tea"
+    },
+    "i learn today": {
+      "gloss": "I-LEARN-TODAY",
+      "lemma": "i learn today"
+    },
+    "i learn tomorrow": {
+      "gloss": "I-LEARN-TOMORROW",
+      "lemma": "i learn tomorrow"
+    },
+    "i learn water": {
+      "gloss": "I-LEARN-WATER",
+      "lemma": "i learn water"
+    },
+    "i learn work": {
+      "gloss": "I-LEARN-WORK",
+      "lemma": "i learn work"
+    },
+    "i like bathroom": {
+      "gloss": "I-LIKE-BATHROOM",
+      "lemma": "i like bathroom"
+    },
+    "i like coffee": {
+      "gloss": "I-LIKE-COFFEE",
+      "lemma": "i like coffee"
+    },
+    "i like food": {
+      "gloss": "I-LIKE-FOOD",
+      "lemma": "i like food"
+    },
+    "i like home": {
+      "gloss": "I-LIKE-HOME",
+      "lemma": "i like home"
+    },
+    "i like now": {
+      "gloss": "I-LIKE-NOW",
+      "lemma": "i like now"
+    },
+    "i like school": {
+      "gloss": "I-LIKE-SCHOOL",
+      "lemma": "i like school"
+    },
+    "i like tea": {
+      "gloss": "I-LIKE-TEA",
+      "lemma": "i like tea"
+    },
+    "i like today": {
+      "gloss": "I-LIKE-TODAY",
+      "lemma": "i like today"
+    },
+    "i like tomorrow": {
+      "gloss": "I-LIKE-TOMORROW",
+      "lemma": "i like tomorrow"
+    },
+    "i like water": {
+      "gloss": "I-LIKE-WATER",
+      "lemma": "i like water"
+    },
+    "i like work": {
+      "gloss": "I-LIKE-WORK",
+      "lemma": "i like work"
+    },
+    "i love bathroom": {
+      "gloss": "I-LOVE-BATHROOM",
+      "lemma": "i love bathroom"
+    },
+    "i love coffee": {
+      "gloss": "I-LOVE-COFFEE",
+      "lemma": "i love coffee"
+    },
+    "i love food": {
+      "gloss": "I-LOVE-FOOD",
+      "lemma": "i love food"
+    },
+    "i love home": {
+      "gloss": "I-LOVE-HOME",
+      "lemma": "i love home"
+    },
+    "i love now": {
+      "gloss": "I-LOVE-NOW",
+      "lemma": "i love now"
+    },
+    "i love school": {
+      "gloss": "I-LOVE-SCHOOL",
+      "lemma": "i love school"
+    },
+    "i love tea": {
+      "gloss": "I-LOVE-TEA",
+      "lemma": "i love tea"
+    },
+    "i love today": {
+      "gloss": "I-LOVE-TODAY",
+      "lemma": "i love today"
+    },
+    "i love tomorrow": {
+      "gloss": "I-LOVE-TOMORROW",
+      "lemma": "i love tomorrow"
+    },
+    "i love water": {
+      "gloss": "I-LOVE-WATER",
+      "lemma": "i love water"
+    },
+    "i love work": {
+      "gloss": "I-LOVE-WORK",
+      "lemma": "i love work"
+    },
+    "i love you": {
+      "gloss": "I-LOVE-YOU",
+      "lemma": "i love you"
+    },
+    "i need bathroom": {
+      "gloss": "I-NEED-BATHROOM",
+      "lemma": "i need bathroom"
+    },
+    "i need coffee": {
+      "gloss": "I-NEED-COFFEE",
+      "lemma": "i need coffee"
+    },
+    "i need food": {
+      "gloss": "I-NEED-FOOD",
+      "lemma": "i need food"
+    },
+    "i need home": {
+      "gloss": "I-NEED-HOME",
+      "lemma": "i need home"
+    },
+    "i need now": {
+      "gloss": "I-NEED-NOW",
+      "lemma": "i need now"
+    },
+    "i need school": {
+      "gloss": "I-NEED-SCHOOL",
+      "lemma": "i need school"
+    },
+    "i need tea": {
+      "gloss": "I-NEED-TEA",
+      "lemma": "i need tea"
+    },
+    "i need today": {
+      "gloss": "I-NEED-TODAY",
+      "lemma": "i need today"
+    },
+    "i need tomorrow": {
+      "gloss": "I-NEED-TOMORROW",
+      "lemma": "i need tomorrow"
+    },
+    "i need water": {
+      "gloss": "I-NEED-WATER",
+      "lemma": "i need water"
+    },
+    "i need work": {
+      "gloss": "I-NEED-WORK",
+      "lemma": "i need work"
+    },
+    "i sleep bathroom": {
+      "gloss": "I-SLEEP-BATHROOM",
+      "lemma": "i sleep bathroom"
+    },
+    "i sleep coffee": {
+      "gloss": "I-SLEEP-COFFEE",
+      "lemma": "i sleep coffee"
+    },
+    "i sleep food": {
+      "gloss": "I-SLEEP-FOOD",
+      "lemma": "i sleep food"
+    },
+    "i sleep home": {
+      "gloss": "I-SLEEP-HOME",
+      "lemma": "i sleep home"
+    },
+    "i sleep now": {
+      "gloss": "I-SLEEP-NOW",
+      "lemma": "i sleep now"
+    },
+    "i sleep school": {
+      "gloss": "I-SLEEP-SCHOOL",
+      "lemma": "i sleep school"
+    },
+    "i sleep tea": {
+      "gloss": "I-SLEEP-TEA",
+      "lemma": "i sleep tea"
+    },
+    "i sleep today": {
+      "gloss": "I-SLEEP-TODAY",
+      "lemma": "i sleep today"
+    },
+    "i sleep tomorrow": {
+      "gloss": "I-SLEEP-TOMORROW",
+      "lemma": "i sleep tomorrow"
+    },
+    "i sleep water": {
+      "gloss": "I-SLEEP-WATER",
+      "lemma": "i sleep water"
+    },
+    "i sleep work": {
+      "gloss": "I-SLEEP-WORK",
+      "lemma": "i sleep work"
+    },
+    "i want bathroom": {
+      "gloss": "I-WANT-BATHROOM",
+      "lemma": "i want bathroom"
+    },
+    "i want coffee": {
+      "gloss": "I-WANT-COFFEE",
+      "lemma": "i want coffee"
+    },
+    "i want food": {
+      "gloss": "I-WANT-FOOD",
+      "lemma": "i want food"
+    },
+    "i want home": {
+      "gloss": "I-WANT-HOME",
+      "lemma": "i want home"
+    },
+    "i want now": {
+      "gloss": "I-WANT-NOW",
+      "lemma": "i want now"
+    },
+    "i want school": {
+      "gloss": "I-WANT-SCHOOL",
+      "lemma": "i want school"
+    },
+    "i want tea": {
+      "gloss": "I-WANT-TEA",
+      "lemma": "i want tea"
+    },
+    "i want today": {
+      "gloss": "I-WANT-TODAY",
+      "lemma": "i want today"
+    },
+    "i want tomorrow": {
+      "gloss": "I-WANT-TOMORROW",
+      "lemma": "i want tomorrow"
+    },
+    "i want water": {
+      "gloss": "I-WANT-WATER",
+      "lemma": "i want water"
+    },
+    "i want work": {
+      "gloss": "I-WANT-WORK",
+      "lemma": "i want work"
+    },
+    "i work bathroom": {
+      "gloss": "I-WORK-BATHROOM",
+      "lemma": "i work bathroom"
+    },
+    "i work coffee": {
+      "gloss": "I-WORK-COFFEE",
+      "lemma": "i work coffee"
+    },
+    "i work food": {
+      "gloss": "I-WORK-FOOD",
+      "lemma": "i work food"
+    },
+    "i work home": {
+      "gloss": "I-WORK-HOME",
+      "lemma": "i work home"
+    },
+    "i work now": {
+      "gloss": "I-WORK-NOW",
+      "lemma": "i work now"
+    },
+    "i work school": {
+      "gloss": "I-WORK-SCHOOL",
+      "lemma": "i work school"
+    },
+    "i work tea": {
+      "gloss": "I-WORK-TEA",
+      "lemma": "i work tea"
+    },
+    "i work today": {
+      "gloss": "I-WORK-TODAY",
+      "lemma": "i work today"
+    },
+    "i work tomorrow": {
+      "gloss": "I-WORK-TOMORROW",
+      "lemma": "i work tomorrow"
+    },
+    "i work water": {
+      "gloss": "I-WORK-WATER",
+      "lemma": "i work water"
+    },
+    "i work work": {
+      "gloss": "I-WORK-WORK",
+      "lemma": "i work work"
+    },
+    "if": {
+      "gloss": "IF",
+      "lemma": "if"
+    },
+    "in": {
+      "gloss": "IN",
+      "lemma": "in"
+    },
+    "it": {
+      "gloss": "IT",
+      "lemma": "it"
+    },
+    "january": {
+      "gloss": "JANUARY",
+      "lemma": "january"
+    },
+    "juice": {
+      "gloss": "JUICE",
+      "lemma": "juice"
+    },
+    "july": {
+      "gloss": "JULY",
+      "lemma": "july"
+    },
+    "june": {
+      "gloss": "JUNE",
+      "lemma": "june"
+    },
+    "keyboard": {
+      "gloss": "KEYBOARD",
+      "lemma": "keyboard"
+    },
+    "kite": {
+      "gloss": "KITE",
+      "lemma": "kite"
+    },
+    "knife": {
+      "gloss": "KNIFE",
+      "lemma": "knife"
+    },
+    "laptop": {
+      "gloss": "LAPTOP",
+      "lemma": "laptop"
+    },
+    "later": {
+      "gloss": "LATER",
+      "lemma": "later"
+    },
+    "learn": {
+      "gloss": "LEARN",
+      "lemma": "learn"
+    },
+    "learned": {
+      "gloss": "LEARN",
+      "lemma": "learn"
+    },
+    "learning": {
+      "gloss": "LEARN",
+      "lemma": "learn"
+    },
+    "learns": {
+      "gloss": "LEARN",
+      "lemma": "learn"
+    },
+    "left": {
+      "gloss": "LEFT",
+      "lemma": "left"
+    },
+    "light": {
+      "gloss": "LIGHT",
+      "lemma": "light"
+    },
+    "like": {
+      "gloss": "LIKE",
+      "lemma": "like"
+    },
+    "likeed": {
+      "gloss": "LIKE",
+      "lemma": "like"
+    },
+    "likeing": {
+      "gloss": "LIKE",
+      "lemma": "like"
+    },
+    "likes": {
+      "gloss": "LIKE",
+      "lemma": "like"
+    },
+    "listen": {
+      "gloss": "LISTEN",
+      "lemma": "listen"
+    },
+    "listened": {
+      "gloss": "LISTEN",
+      "lemma": "listen"
+    },
+    "listening": {
+      "gloss": "LISTEN",
+      "lemma": "listen"
+    },
+    "listens": {
+      "gloss": "LISTEN",
+      "lemma": "listen"
+    },
+    "look": {
+      "gloss": "LOOK",
+      "lemma": "look"
+    },
+    "looked": {
+      "gloss": "LOOK",
+      "lemma": "look"
+    },
+    "looking": {
+      "gloss": "LOOK",
+      "lemma": "look"
+    },
+    "looks": {
+      "gloss": "LOOK",
+      "lemma": "look"
+    },
+    "love": {
+      "gloss": "LOVE",
+      "lemma": "love"
+    },
+    "loveed": {
+      "gloss": "LOVE",
+      "lemma": "love"
+    },
+    "loveing": {
+      "gloss": "LOVE",
+      "lemma": "love"
+    },
+    "loves": {
+      "gloss": "LOVE",
+      "lemma": "love"
+    },
+    "march": {
+      "gloss": "MARCH",
+      "lemma": "march"
+    },
+    "may": {
+      "gloss": "MAY",
+      "lemma": "may"
+    },
+    "maybe": {
+      "gloss": "MAYBE",
+      "lemma": "maybe"
+    },
+    "me": {
+      "gloss": "ME",
+      "lemma": "me"
+    },
+    "medicine": {
+      "gloss": "MEDICINE",
+      "lemma": "medicine"
+    },
+    "microwave": {
+      "gloss": "MICROWAVE",
+      "lemma": "microwave"
+    },
+    "milk": {
+      "gloss": "MILK",
+      "lemma": "milk"
+    },
+    "monday": {
+      "gloss": "MONDAY",
+      "lemma": "monday"
+    },
+    "morning": {
+      "gloss": "MORNING",
+      "lemma": "morning"
+    },
+    "mother": {
+      "gloss": "MOTHER",
+      "lemma": "mother"
+    },
+    "motorcycle": {
+      "gloss": "MOTORCYCLE",
+      "lemma": "motorcycle"
+    },
+    "mouse": {
+      "gloss": "MOUSE",
+      "lemma": "mouse"
+    },
+    "my": {
+      "gloss": "MY",
+      "lemma": "my"
+    },
+    "near": {
+      "gloss": "NEAR",
+      "lemma": "near"
+    },
+    "need": {
+      "gloss": "NEED",
+      "lemma": "need"
+    },
+    "needed": {
+      "gloss": "NEED",
+      "lemma": "need"
+    },
+    "needing": {
+      "gloss": "NEED",
+      "lemma": "need"
+    },
+    "needs": {
+      "gloss": "NEED",
+      "lemma": "need"
+    },
+    "never": {
+      "gloss": "NEVER",
+      "lemma": "never"
+    },
+    "night": {
+      "gloss": "NIGHT",
+      "lemma": "night"
+    },
+    "nine": {
+      "gloss": "NINE",
+      "lemma": "nine"
+    },
+    "nineteen": {
+      "gloss": "NINETEEN",
+      "lemma": "nineteen"
+    },
+    "no": {
+      "gloss": "NO",
+      "lemma": "no"
+    },
+    "november": {
+      "gloss": "NOVEMBER",
+      "lemma": "november"
+    },
+    "now": {
+      "gloss": "NOW",
+      "lemma": "now"
+    },
+    "october": {
+      "gloss": "OCTOBER",
+      "lemma": "october"
+    },
+    "off": {
+      "gloss": "OFF",
+      "lemma": "off"
+    },
+    "on": {
+      "gloss": "ON",
+      "lemma": "on"
+    },
+    "one": {
+      "gloss": "ONE",
+      "lemma": "one"
+    },
+    "open": {
+      "gloss": "OPEN",
+      "lemma": "open"
+    },
+    "or": {
+      "gloss": "OR",
+      "lemma": "or"
+    },
+    "orange": {
+      "gloss": "ORANGE",
+      "lemma": "orange"
+    },
+    "out": {
+      "gloss": "OUT",
+      "lemma": "out"
+    },
+    "oven": {
+      "gloss": "OVEN",
+      "lemma": "oven"
+    },
+    "pain": {
+      "gloss": "PAIN",
+      "lemma": "pain"
+    },
+    "parent": {
+      "gloss": "PARENT",
+      "lemma": "parent"
+    },
+    "people": {
+      "gloss": "PERSON",
+      "lemma": "person"
+    },
+    "person": {
+      "gloss": "PERSON",
+      "lemma": "person"
+    },
+    "phone": {
+      "gloss": "PHONE",
+      "lemma": "phone"
+    },
+    "pink": {
+      "gloss": "PINK",
+      "lemma": "pink"
+    },
+    "pizza": {
+      "gloss": "PIZZA",
+      "lemma": "pizza"
+    },
+    "plane": {
+      "gloss": "PLANE",
+      "lemma": "plane"
+    },
+    "please": {
+      "gloss": "PLEASE",
+      "lemma": "please"
+    },
+    "police": {
+      "gloss": "POLICE",
+      "lemma": "police"
+    },
+    "potted plant": {
+      "gloss": "POTTED-PLANT",
+      "lemma": "potted plant"
+    },
+    "purple": {
+      "gloss": "PURPLE",
+      "lemma": "purple"
+    },
+    "read": {
+      "gloss": "READ",
+      "lemma": "read"
+    },
+    "readed": {
+      "gloss": "READ",
+      "lemma": "read"
+    },
+    "reading": {
+      "gloss": "READ",
+      "lemma": "read"
+    },
+    "reads": {
+      "gloss": "READ",
+      "lemma": "read"
+    },
+    "red": {
+      "gloss": "RED",
+      "lemma": "red"
+    },
+    "refrigerator": {
+      "gloss": "REFRIGERATOR",
+      "lemma": "refrigerator"
+    },
+    "remote": {
+      "gloss": "REMOTE",
+      "lemma": "remote"
+    },
+    "right": {
+      "gloss": "RIGHT",
+      "lemma": "right"
+    },
+    "road": {
+      "gloss": "ROAD",
+      "lemma": "road"
+    },
+    "sad": {
+      "gloss": "SAD",
+      "lemma": "sad"
+    },
+    "safe": {
+      "gloss": "SAFE",
+      "lemma": "safe"
+    },
+    "sandwich": {
+      "gloss": "SANDWICH",
+      "lemma": "sandwich"
+    },
+    "saturday": {
+      "gloss": "SATURDAY",
+      "lemma": "saturday"
+    },
+    "scared": {
+      "gloss": "SCARED",
+      "lemma": "scared"
+    },
+    "school": {
+      "gloss": "SCHOOL",
+      "lemma": "school"
+    },
+    "scissors": {
+      "gloss": "SCISSORS",
+      "lemma": "scissors"
+    },
+    "see": {
+      "gloss": "SEE",
+      "lemma": "see"
+    },
+    "september": {
+      "gloss": "SEPTEMBER",
+      "lemma": "september"
+    },
+    "seven": {
+      "gloss": "SEVEN",
+      "lemma": "seven"
+    },
+    "seventeen": {
+      "gloss": "SEVENTEEN",
+      "lemma": "seventeen"
+    },
+    "she": {
+      "gloss": "SHE",
+      "lemma": "she"
+    },
+    "sheep": {
+      "gloss": "SHEEP",
+      "lemma": "sheep"
+    },
+    "sick": {
+      "gloss": "SICK",
+      "lemma": "sick"
+    },
+    "sink": {
+      "gloss": "SINK",
+      "lemma": "sink"
+    },
+    "sister": {
+      "gloss": "SISTER",
+      "lemma": "sister"
+    },
+    "six": {
+      "gloss": "SIX",
+      "lemma": "six"
+    },
+    "sixteen": {
+      "gloss": "SIXTEEN",
+      "lemma": "sixteen"
+    },
+    "skateboard": {
+      "gloss": "SKATEBOARD",
+      "lemma": "skateboard"
+    },
+    "skis": {
+      "gloss": "SKIS",
+      "lemma": "skis"
+    },
+    "sleep": {
+      "gloss": "SLEEP",
+      "lemma": "sleep"
+    },
+    "sleeped": {
+      "gloss": "SLEEP",
+      "lemma": "sleep"
+    },
+    "sleeping": {
+      "gloss": "SLEEP",
+      "lemma": "sleep"
+    },
+    "sleeps": {
+      "gloss": "SLEEP",
+      "lemma": "sleep"
+    },
+    "slow": {
+      "gloss": "SLOW",
+      "lemma": "slow"
+    },
+    "small": {
+      "gloss": "SMALL",
+      "lemma": "small"
+    },
+    "smoke": {
+      "gloss": "SMOKE",
+      "lemma": "smoke"
+    },
+    "snowboard": {
+      "gloss": "SNOWBOARD",
+      "lemma": "snowboard"
+    },
+    "sometimes": {
+      "gloss": "SOMETIMES",
+      "lemma": "sometimes"
+    },
+    "sorry": {
+      "gloss": "SORRY",
+      "lemma": "sorry"
+    },
+    "speak": {
+      "gloss": "SPEAK",
+      "lemma": "speak"
+    },
+    "speaked": {
+      "gloss": "SPEAK",
+      "lemma": "speak"
+    },
+    "speaking": {
+      "gloss": "SPEAK",
+      "lemma": "speak"
+    },
+    "speaks": {
+      "gloss": "SPEAK",
+      "lemma": "speak"
+    },
+    "spoon": {
+      "gloss": "SPOON",
+      "lemma": "spoon"
+    },
+    "sports ball": {
+      "gloss": "SPORTS-BALL",
+      "lemma": "sports ball"
+    },
+    "stop": {
+      "gloss": "STOP",
+      "lemma": "stop"
+    },
+    "stop sign": {
+      "gloss": "STOP-SIGN",
+      "lemma": "stop sign"
+    },
+    "stoped": {
+      "gloss": "STOP",
+      "lemma": "stop"
+    },
+    "stoping": {
+      "gloss": "STOP",
+      "lemma": "stop"
+    },
+    "stops": {
+      "gloss": "STOP",
+      "lemma": "stop"
+    },
+    "street": {
+      "gloss": "STREET",
+      "lemma": "street"
+    },
+    "study": {
+      "gloss": "STUDY",
+      "lemma": "study"
+    },
+    "studyed": {
+      "gloss": "STUDY",
+      "lemma": "study"
+    },
+    "studying": {
+      "gloss": "STUDY",
+      "lemma": "study"
+    },
+    "studys": {
+      "gloss": "STUDY",
+      "lemma": "study"
+    },
+    "suitcase": {
+      "gloss": "SUITCASE",
+      "lemma": "suitcase"
+    },
+    "sunday": {
+      "gloss": "SUNDAY",
+      "lemma": "sunday"
+    },
+    "surfboard": {
+      "gloss": "SURFBOARD",
+      "lemma": "surfboard"
+    },
+    "table": {
+      "gloss": "TABLE",
+      "lemma": "table"
+    },
+    "tea": {
+      "gloss": "TEA",
+      "lemma": "tea"
+    },
+    "teach": {
+      "gloss": "TEACH",
+      "lemma": "teach"
+    },
+    "teached": {
+      "gloss": "TEACH",
+      "lemma": "teach"
+    },
+    "teaching": {
+      "gloss": "TEACH",
+      "lemma": "teach"
+    },
+    "teachs": {
+      "gloss": "TEACH",
+      "lemma": "teach"
+    },
+    "teddy bear": {
+      "gloss": "TEDDY-BEAR",
+      "lemma": "teddy bear"
+    },
+    "ten": {
+      "gloss": "TEN",
+      "lemma": "ten"
+    },
+    "tennis racket": {
+      "gloss": "TENNIS-RACKET",
+      "lemma": "tennis racket"
+    },
+    "thank": {
+      "gloss": "THANK",
+      "lemma": "thank"
+    },
+    "thank you": {
+      "gloss": "THANK-YOU",
+      "lemma": "thank you"
+    },
+    "thanks": {
+      "gloss": "THANK",
+      "lemma": "thank"
+    },
+    "then": {
+      "gloss": "THEN",
+      "lemma": "then"
+    },
+    "there": {
+      "gloss": "THERE",
+      "lemma": "there"
+    },
+    "they": {
+      "gloss": "THEY",
+      "lemma": "they"
+    },
+    "thirsty": {
+      "gloss": "THIRSTY",
+      "lemma": "thirsty"
+    },
+    "thirteen": {
+      "gloss": "THIRTEEN",
+      "lemma": "thirteen"
+    },
+    "three": {
+      "gloss": "THREE",
+      "lemma": "three"
+    },
+    "thursday": {
+      "gloss": "THURSDAY",
+      "lemma": "thursday"
+    },
+    "tie": {
+      "gloss": "TIE",
+      "lemma": "tie"
+    },
+    "time": {
+      "gloss": "TIME",
+      "lemma": "time"
+    },
+    "tired": {
+      "gloss": "TIRED",
+      "lemma": "tired"
+    },
+    "toaster": {
+      "gloss": "TOASTER",
+      "lemma": "toaster"
+    },
+    "today": {
+      "gloss": "TODAY",
+      "lemma": "today"
+    },
+    "toilet": {
+      "gloss": "TOILET",
+      "lemma": "toilet"
+    },
+    "tomorrow": {
+      "gloss": "TOMORROW",
+      "lemma": "tomorrow"
+    },
+    "toothbrush": {
+      "gloss": "TOOTHBRUSH",
+      "lemma": "toothbrush"
+    },
+    "traffic": {
+      "gloss": "TRAFFIC",
+      "lemma": "traffic"
+    },
+    "traffic light": {
+      "gloss": "TRAFFIC-LIGHT",
+      "lemma": "traffic light"
+    },
+    "train": {
+      "gloss": "TRAIN",
+      "lemma": "train"
+    },
+    "truck": {
+      "gloss": "TRUCK",
+      "lemma": "truck"
+    },
+    "tuesday": {
+      "gloss": "TUESDAY",
+      "lemma": "tuesday"
+    },
+    "tv": {
+      "gloss": "TV",
+      "lemma": "tv"
+    },
+    "twelve": {
+      "gloss": "TWELVE",
+      "lemma": "twelve"
+    },
+    "twenty": {
+      "gloss": "TWENTY",
+      "lemma": "twenty"
+    },
+    "two": {
+      "gloss": "TWO",
+      "lemma": "two"
+    },
+    "umbrella": {
+      "gloss": "UMBRELLA",
+      "lemma": "umbrella"
+    },
+    "up": {
+      "gloss": "UP",
+      "lemma": "up"
+    },
+    "us": {
+      "gloss": "US",
+      "lemma": "us"
+    },
+    "vase": {
+      "gloss": "VASE",
+      "lemma": "vase"
+    },
+    "want": {
+      "gloss": "WANT",
+      "lemma": "want"
+    },
+    "wanted": {
+      "gloss": "WANT",
+      "lemma": "want"
+    },
+    "wanting": {
+      "gloss": "WANT",
+      "lemma": "want"
+    },
+    "wants": {
+      "gloss": "WANT",
+      "lemma": "want"
+    },
+    "watch": {
+      "gloss": "WATCH",
+      "lemma": "watch"
+    },
+    "watched": {
+      "gloss": "WATCH",
+      "lemma": "watch"
+    },
+    "watching": {
+      "gloss": "WATCH",
+      "lemma": "watch"
+    },
+    "watchs": {
+      "gloss": "WATCH",
+      "lemma": "watch"
+    },
+    "water": {
+      "gloss": "WATER",
+      "lemma": "water"
+    },
+    "we": {
+      "gloss": "WE",
+      "lemma": "we"
+    },
+    "wednesday": {
+      "gloss": "WEDNESDAY",
+      "lemma": "wednesday"
+    },
+    "welcome": {
+      "gloss": "WELCOME",
+      "lemma": "welcome"
+    },
+    "what": {
+      "gloss": "WHAT",
+      "lemma": "what"
+    },
+    "what time": {
+      "gloss": "WHAT-TIME",
+      "lemma": "what time"
+    },
+    "when": {
+      "gloss": "WHEN",
+      "lemma": "when"
+    },
+    "where": {
+      "gloss": "WHERE",
+      "lemma": "where"
+    },
+    "white": {
+      "gloss": "WHITE",
+      "lemma": "white"
+    },
+    "who": {
+      "gloss": "WHO",
+      "lemma": "who"
+    },
+    "why": {
+      "gloss": "WHY",
+      "lemma": "why"
+    },
+    "window": {
+      "gloss": "WINDOW",
+      "lemma": "window"
+    },
+    "wine glass": {
+      "gloss": "WINE-GLASS",
+      "lemma": "wine glass"
+    },
+    "with": {
+      "gloss": "WITH",
+      "lemma": "with"
+    },
+    "without": {
+      "gloss": "WITHOUT",
+      "lemma": "without"
+    },
+    "work": {
+      "gloss": "WORK",
+      "lemma": "work"
+    },
+    "worked": {
+      "gloss": "WORK",
+      "lemma": "work"
+    },
+    "working": {
+      "gloss": "WORK",
+      "lemma": "work"
+    },
+    "works": {
+      "gloss": "WORK",
+      "lemma": "work"
+    },
+    "write": {
+      "gloss": "WRITE",
+      "lemma": "write"
+    },
+    "writeed": {
+      "gloss": "WRITE",
+      "lemma": "write"
+    },
+    "writeing": {
+      "gloss": "WRITE",
+      "lemma": "write"
+    },
+    "writes": {
+      "gloss": "WRITE",
+      "lemma": "write"
+    },
+    "yellow": {
+      "gloss": "YELLOW",
+      "lemma": "yellow"
+    },
+    "yes": {
+      "gloss": "YES",
+      "lemma": "yes"
+    },
+    "yesterday": {
+      "gloss": "YESTERDAY",
+      "lemma": "yesterday"
+    },
+    "you": {
+      "gloss": "YOU",
+      "lemma": "you"
+    },
+    "you come bathroom": {
+      "gloss": "YOU-COME-BATHROOM",
+      "lemma": "you come bathroom"
+    },
+    "you come coffee": {
+      "gloss": "YOU-COME-COFFEE",
+      "lemma": "you come coffee"
+    },
+    "you come food": {
+      "gloss": "YOU-COME-FOOD",
+      "lemma": "you come food"
+    },
+    "you come home": {
+      "gloss": "YOU-COME-HOME",
+      "lemma": "you come home"
+    },
+    "you come now": {
+      "gloss": "YOU-COME-NOW",
+      "lemma": "you come now"
+    },
+    "you come school": {
+      "gloss": "YOU-COME-SCHOOL",
+      "lemma": "you come school"
+    },
+    "you come tea": {
+      "gloss": "YOU-COME-TEA",
+      "lemma": "you come tea"
+    },
+    "you come today": {
+      "gloss": "YOU-COME-TODAY",
+      "lemma": "you come today"
+    },
+    "you come tomorrow": {
+      "gloss": "YOU-COME-TOMORROW",
+      "lemma": "you come tomorrow"
+    },
+    "you come water": {
+      "gloss": "YOU-COME-WATER",
+      "lemma": "you come water"
+    },
+    "you come work": {
+      "gloss": "YOU-COME-WORK",
+      "lemma": "you come work"
+    },
+    "you eat home": {
+      "gloss": "YOU-EAT-HOME",
+      "lemma": "you eat home"
+    },
+    "you eat school": {
+      "gloss": "YOU-EAT-SCHOOL",
+      "lemma": "you eat school"
+    },
+    "you eat work": {
+      "gloss": "YOU-EAT-WORK",
+      "lemma": "you eat work"
+    },
+    "you go bathroom": {
+      "gloss": "YOU-GO-BATHROOM",
+      "lemma": "you go bathroom"
+    },
+    "you go coffee": {
+      "gloss": "YOU-GO-COFFEE",
+      "lemma": "you go coffee"
+    },
+    "you go food": {
+      "gloss": "YOU-GO-FOOD",
+      "lemma": "you go food"
+    },
+    "you go home": {
+      "gloss": "YOU-GO-HOME",
+      "lemma": "you go home"
+    },
+    "you go now": {
+      "gloss": "YOU-GO-NOW",
+      "lemma": "you go now"
+    },
+    "you go school": {
+      "gloss": "YOU-GO-SCHOOL",
+      "lemma": "you go school"
+    },
+    "you go tea": {
+      "gloss": "YOU-GO-TEA",
+      "lemma": "you go tea"
+    },
+    "you go today": {
+      "gloss": "YOU-GO-TODAY",
+      "lemma": "you go today"
+    },
+    "you go tomorrow": {
+      "gloss": "YOU-GO-TOMORROW",
+      "lemma": "you go tomorrow"
+    },
+    "you go water": {
+      "gloss": "YOU-GO-WATER",
+      "lemma": "you go water"
+    },
+    "you go work": {
+      "gloss": "YOU-GO-WORK",
+      "lemma": "you go work"
+    },
+    "you like bathroom": {
+      "gloss": "YOU-LIKE-BATHROOM",
+      "lemma": "you like bathroom"
+    },
+    "you like coffee": {
+      "gloss": "YOU-LIKE-COFFEE",
+      "lemma": "you like coffee"
+    },
+    "you like food": {
+      "gloss": "YOU-LIKE-FOOD",
+      "lemma": "you like food"
+    },
+    "you like home": {
+      "gloss": "YOU-LIKE-HOME",
+      "lemma": "you like home"
+    },
+    "you like now": {
+      "gloss": "YOU-LIKE-NOW",
+      "lemma": "you like now"
+    },
+    "you like school": {
+      "gloss": "YOU-LIKE-SCHOOL",
+      "lemma": "you like school"
+    },
+    "you like tea": {
+      "gloss": "YOU-LIKE-TEA",
+      "lemma": "you like tea"
+    },
+    "you like today": {
+      "gloss": "YOU-LIKE-TODAY",
+      "lemma": "you like today"
+    },
+    "you like tomorrow": {
+      "gloss": "YOU-LIKE-TOMORROW",
+      "lemma": "you like tomorrow"
+    },
+    "you like water": {
+      "gloss": "YOU-LIKE-WATER",
+      "lemma": "you like water"
+    },
+    "you like work": {
+      "gloss": "YOU-LIKE-WORK",
+      "lemma": "you like work"
+    },
+    "you love bathroom": {
+      "gloss": "YOU-LOVE-BATHROOM",
+      "lemma": "you love bathroom"
+    },
+    "you love coffee": {
+      "gloss": "YOU-LOVE-COFFEE",
+      "lemma": "you love coffee"
+    },
+    "you love food": {
+      "gloss": "YOU-LOVE-FOOD",
+      "lemma": "you love food"
+    },
+    "you love home": {
+      "gloss": "YOU-LOVE-HOME",
+      "lemma": "you love home"
+    },
+    "you love now": {
+      "gloss": "YOU-LOVE-NOW",
+      "lemma": "you love now"
+    },
+    "you love school": {
+      "gloss": "YOU-LOVE-SCHOOL",
+      "lemma": "you love school"
+    },
+    "you love tea": {
+      "gloss": "YOU-LOVE-TEA",
+      "lemma": "you love tea"
+    },
+    "you love today": {
+      "gloss": "YOU-LOVE-TODAY",
+      "lemma": "you love today"
+    },
+    "you love tomorrow": {
+      "gloss": "YOU-LOVE-TOMORROW",
+      "lemma": "you love tomorrow"
+    },
+    "you love water": {
+      "gloss": "YOU-LOVE-WATER",
+      "lemma": "you love water"
+    },
+    "you love work": {
+      "gloss": "YOU-LOVE-WORK",
+      "lemma": "you love work"
+    },
+    "you need bathroom": {
+      "gloss": "YOU-NEED-BATHROOM",
+      "lemma": "you need bathroom"
+    },
+    "you need coffee": {
+      "gloss": "YOU-NEED-COFFEE",
+      "lemma": "you need coffee"
+    },
+    "you need food": {
+      "gloss": "YOU-NEED-FOOD",
+      "lemma": "you need food"
+    },
+    "you need home": {
+      "gloss": "YOU-NEED-HOME",
+      "lemma": "you need home"
+    },
+    "you need now": {
+      "gloss": "YOU-NEED-NOW",
+      "lemma": "you need now"
+    },
+    "you need school": {
+      "gloss": "YOU-NEED-SCHOOL",
+      "lemma": "you need school"
+    },
+    "you need tea": {
+      "gloss": "YOU-NEED-TEA",
+      "lemma": "you need tea"
+    },
+    "you need today": {
+      "gloss": "YOU-NEED-TODAY",
+      "lemma": "you need today"
+    },
+    "you need tomorrow": {
+      "gloss": "YOU-NEED-TOMORROW",
+      "lemma": "you need tomorrow"
+    },
+    "you need water": {
+      "gloss": "YOU-NEED-WATER",
+      "lemma": "you need water"
+    },
+    "you need work": {
+      "gloss": "YOU-NEED-WORK",
+      "lemma": "you need work"
+    },
+    "you want bathroom": {
+      "gloss": "YOU-WANT-BATHROOM",
+      "lemma": "you want bathroom"
+    },
+    "you want coffee": {
+      "gloss": "YOU-WANT-COFFEE",
+      "lemma": "you want coffee"
+    },
+    "you want food": {
+      "gloss": "YOU-WANT-FOOD",
+      "lemma": "you want food"
+    },
+    "you want home": {
+      "gloss": "YOU-WANT-HOME",
+      "lemma": "you want home"
+    },
+    "you want now": {
+      "gloss": "YOU-WANT-NOW",
+      "lemma": "you want now"
+    },
+    "you want school": {
+      "gloss": "YOU-WANT-SCHOOL",
+      "lemma": "you want school"
+    },
+    "you want tea": {
+      "gloss": "YOU-WANT-TEA",
+      "lemma": "you want tea"
+    },
+    "you want today": {
+      "gloss": "YOU-WANT-TODAY",
+      "lemma": "you want today"
+    },
+    "you want tomorrow": {
+      "gloss": "YOU-WANT-TOMORROW",
+      "lemma": "you want tomorrow"
+    },
+    "you want water": {
+      "gloss": "YOU-WANT-WATER",
+      "lemma": "you want water"
+    },
+    "you want work": {
+      "gloss": "YOU-WANT-WORK",
+      "lemma": "you want work"
+    },
+    "your": {
+      "gloss": "YOUR",
+      "lemma": "your"
+    },
+    "zebra": {
+      "gloss": "ZEBRA",
+      "lemma": "zebra"
+    },
+    "zero": {
+      "gloss": "ZERO",
+      "lemma": "zero"
+    }
+  },
+  "generatedAt": "2026-01-01T20:56:01.277813Z",
+  "version": 1
+}

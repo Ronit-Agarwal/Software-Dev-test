@@ -221,7 +221,9 @@ class PerformanceTrace {
   final Stopwatch _stopwatch;
   final Map<String, dynamic> _metrics;
 
-  PerformanceTrace(this._operation) : _stopwatch = Stopwatch();
+  PerformanceTrace(this._operation)
+      : _stopwatch = Stopwatch(),
+        _metrics = <String, dynamic>{};
 
   /// Starts the trace.
   void start() {
@@ -334,6 +336,16 @@ class AnalyticsEvent {
   /// Logs object detection stopped.
   static void logObjectDetectionStopped({required int objectCount}) {
     log(objectDetectionStopped, parameters: {'object_count': objectCount});
+  }
+
+  /// Logs sound alerts started.
+  static void logSoundAlertsStarted() {
+    log(soundAlertsStarted);
+  }
+
+  /// Logs sound alerts stopped.
+  static void logSoundAlertsStopped({required int durationMs}) {
+    log(soundAlertsStopped, parameters: {'duration_ms': durationMs});
   }
 
   /// Logs a feature was used.
