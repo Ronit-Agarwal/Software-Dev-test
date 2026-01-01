@@ -10,6 +10,7 @@ import 'package:signsync/services/camera_service.dart';
 import 'package:signsync/services/frame_extractor.dart';
 import 'package:signsync/services/cnn_inference_service.dart';
 import 'package:signsync/services/lstm_inference_service.dart';
+import 'package:signsync/services/yolo_detection_service.dart';
 import 'package:signsync/services/ml_orchestrator_service.dart';
 
 /// Root provider for the application configuration.
@@ -80,12 +81,21 @@ final framePerformanceProvider = Provider<FramePerformanceMetrics>((ref) {
 
 /// Provider for ML inference service.
 final mlInferenceServiceProvider = ChangeNotifierProvider<MlInferenceService>((ref) {
-  return MlInferenceService();
+  final orchestrator = ref.watch(mlOrchestratorProvider);
+  return MlInferenceService(orchestrator: orchestrator);
 });
 
 /// Provider for ML orchestrator service (main ML coordinator).
 final mlOrchestratorProvider = ChangeNotifierProvider<MlOrchestratorService>((ref) {
-  return MlOrchestratorService();
+  final cnnService = ref.watch(cnnInferenceServiceProvider);
+  final lstmService = ref.watch(lstmInferenceServiceProvider);
+  final yoloService = ref.watch(yoloDetectionServiceProvider);
+  
+  return MlOrchestratorService(
+    cnnService: cnnService,
+    lstmService: lstmService,
+    yoloService: yoloService,
+  );
 });
 
 /// Provider for CNN inference service (ResNet-50 for static ASL signs).
@@ -97,6 +107,11 @@ final cnnInferenceServiceProvider = ChangeNotifierProvider<CnnInferenceService>(
 final lstmInferenceServiceProvider = ChangeNotifierProvider<LstmInferenceService>((ref) {
   final cnnService = ref.watch(cnnInferenceServiceProvider);
   return LstmInferenceService(cnnService: cnnService);
+});
+
+/// Provider for YOLO detection service (real-time object detection).
+final yoloDetectionServiceProvider = ChangeNotifierProvider<YoloDetectionService>((ref) {
+  return YoloDetectionService();
 });
 
 /// Provider for latest ML result.

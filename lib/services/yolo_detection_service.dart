@@ -24,8 +24,37 @@ class YoloDetectionService with ChangeNotifier {
   static const int inputSize = 640; // YOLOv11 input size
   static const int numChannels = 3;
   static const int numClasses = 80; // COCO dataset classes
-  static const double confidenceThreshold = 0.25; // YOLO threshold
+  static const double confidenceThreshold = 0.60; // Filter detections by confidence threshold (0.6+)
   static const double nmsThreshold = 0.45; // Non-maximum suppression threshold
+
+  // Monocular depth estimation constants
+  static const double _focalLengthFactor = 1.0; // Heuristic focal length factor
+  static const Map<String, double> _realWorldHeights = {
+    'person': 1.7,
+    'bicycle': 1.0,
+    'car': 1.5,
+    'motorcycle': 1.0,
+    'bus': 3.0,
+    'truck': 3.5,
+    'traffic light': 0.8,
+    'stop sign': 0.75,
+    'bench': 0.5,
+    'dog': 0.5,
+    'cat': 0.25,
+    'backpack': 0.45,
+    'umbrella': 0.8,
+    'bottle': 0.25,
+    'cup': 0.12,
+    'chair': 0.9,
+    'couch': 0.8,
+    'potted plant': 0.4,
+    'dining table': 0.75,
+    'tv': 0.6,
+    'laptop': 0.2,
+    'cell phone': 0.15,
+    'book': 0.2,
+    'clock': 0.25,
+  };
 
   // Performance monitoring
   final List<double> _inferenceTimes = [];
@@ -33,10 +62,12 @@ class YoloDetectionService with ChangeNotifier {
   int _framesProcessed = 0;
   int _totalObjectsDetected = 0;
 
-  // Detection tracking
+  // Detection tracking and distance caching
   final List<DetectionFrame> _frameHistory = [];
   final Map<String, int> _objectFrequency = {};
   final Map<String, DateTime> _firstSeen = {};
+  final Map<String, List<double>> _distanceCache = {}; // Cache for distance smoothing
+  static const int _maxCacheSize = 5;
 
   // COCO class labels (80 classes)
   static const List<String> _cocoLabels = [
@@ -335,15 +366,62 @@ class YoloDetectionService with ChangeNotifier {
           ? _cocoLabels[classIndex] 
           : 'unknown';
 
+      // Estimate distance and depth
+      final distance = _estimateDistance(className, h);
+      final smoothedDistance = _getSmoothedDistance(className, distance);
+      final depth = _estimateDepth(smoothedDistance);
+
       // Create detected object
       objects.add(DetectedObject.basic(
         label: className,
         confidence: confidence * maxClassProb,
         boundingBox: boundingBox,
+        distance: smoothedDistance,
+        depth: depth,
       ));
     }
 
     return objects;
+  }
+
+  /// Estimates distance to object based on bounding box height and real-world size.
+  double _estimateDistance(String label, double normalizedHeight) {
+    if (normalizedHeight <= 0) return 0.0;
+    
+    final realHeight = _realWorldHeights[label] ?? 1.0; // Default 1m if unknown
+    
+    // Simple monocular depth formula: distance = (realHeight * focalLength) / imageHeight
+    // Using normalized coordinates where image height is 1.0
+    return (realHeight * _focalLengthFactor) / normalizedHeight;
+  }
+
+  /// Smooths distance measurements using a moving average cache.
+  double _getSmoothedDistance(String label, double currentDistance) {
+    if (!_distanceCache.containsKey(label)) {
+      _distanceCache[label] = [];
+    }
+    
+    final history = _distanceCache[label]!;
+    history.add(currentDistance);
+    
+    if (history.length > _maxCacheSize) {
+      history.removeAt(0);
+    }
+    
+    // Return average of recent measurements
+    return history.reduce((a, b) => a + b) / history.length;
+  }
+
+  /// Estimates a relative depth score [0, 1] based on distance.
+  /// 1.0 is very close, 0.0 is very far.
+  double _estimateDepth(double distance) {
+    if (distance <= 0) return 0.0;
+    // Assume 10 meters is "far" (0.0) and 0.5 meters is "close" (1.0)
+    const maxDistance = 10.0;
+    const minDistance = 0.5;
+    
+    final normalized = (distance - minDistance) / (maxDistance - minDistance);
+    return (1.0 - normalized).clamp(0.0, 1.0);
   }
 
   /// Gets detection statistics.
@@ -384,6 +462,7 @@ class YoloDetectionService with ChangeNotifier {
     _frameHistory.clear();
     _objectFrequency.clear();
     _firstSeen.clear();
+    _distanceCache.clear();
     _inferenceTimes.clear();
     _detectionCountHistory.clear();
     _framesProcessed = 0;
@@ -396,6 +475,7 @@ class YoloDetectionService with ChangeNotifier {
     _frameHistory.clear();
     _objectFrequency.clear();
     _firstSeen.clear();
+    _distanceCache.clear();
     LoggerService.info('YOLO detection history cleared');
   }
 
@@ -470,7 +550,7 @@ List<List<double>> _applyNMSIsolate(Map<String, dynamic> data) {
   filtered.sort((a, b) => b[4].compareTo(a[4]));
 
   final selected = <List<double>>[];
-  final used = <bool>filled(filtered.length, false);
+  final used = List<bool>.filled(filtered.length, false);
 
   for (int i = 0; i < filtered.length; i++) {
     if (used[i]) continue;
@@ -499,7 +579,7 @@ double _calculateIoU(List<double> box1, List<double> box2) {
   final y2 = box1[1] + box1[3] / 2;
 
   final x3 = box2[0] - box2[2] / 2;
-  final y3 = box2[1] - box2[2] / 2;
+  final y3 = box2[1] - box2[3] / 2;
   final x4 = box2[0] + box2[2] / 2;
   final y4 = box2[1] + box2[3] / 2;
 
@@ -568,7 +648,7 @@ Float32List _imageToFloat32List(img.Image image) {
       
       final r = ((pixel >> 16) & 0xFF) / 255.0;
       final g = ((pixel >> 8) & 0xFF) / 255.0;
-      final final b = (pixel & 0xFF) / 255.0;
+      final b = (pixel & 0xFF) / 255.0;
       
       // YOLO normalization (0-1 range)
       final index = (y * inputSize + x) * 3;

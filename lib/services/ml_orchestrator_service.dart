@@ -44,7 +44,7 @@ class MlOrchestratorService with ChangeNotifier {
   bool _enableLstm = true;
   bool _enableYolo = true;
   double _aslConfidenceThreshold = 0.85;
-  double _objectConfidenceThreshold = 0.25;
+  double _objectConfidenceThreshold = 0.60;
 
   // Getters
   bool get isInitialized => _isInitialized;
