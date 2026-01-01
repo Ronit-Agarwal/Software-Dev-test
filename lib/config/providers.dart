@@ -9,6 +9,7 @@ import 'package:signsync/models/camera_state.dart';
 import 'package:signsync/services/camera_service.dart';
 import 'package:signsync/services/frame_extractor.dart';
 import 'package:signsync/services/cnn_inference_service.dart';
+import 'package:signsync/services/lstm_inference_service.dart';
 import 'package:signsync/services/ml_orchestrator_service.dart';
 
 /// Root provider for the application configuration.
@@ -90,6 +91,12 @@ final mlOrchestratorProvider = ChangeNotifierProvider<MlOrchestratorService>((re
 /// Provider for CNN inference service (ResNet-50 for static ASL signs).
 final cnnInferenceServiceProvider = ChangeNotifierProvider<CnnInferenceService>((ref) {
   return CnnInferenceService();
+});
+
+/// Provider for LSTM inference service (temporal ASL sign recognition).
+final lstmInferenceServiceProvider = ChangeNotifierProvider<LstmInferenceService>((ref) {
+  final cnnService = ref.watch(cnnInferenceServiceProvider);
+  return LstmInferenceService(cnnService: cnnService);
 });
 
 /// Provider for latest ML result.
