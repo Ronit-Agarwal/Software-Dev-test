@@ -280,6 +280,10 @@ class _DetectionScreenState extends ConsumerState<DetectionScreen> {
 
   Widget _buildObjectTile(DetectedObject object) {
     final confidencePercent = (object.confidence * 100).toStringAsFixed(1);
+    final distanceMeters = object.distance?.toStringAsFixed(1) ?? '?.?';
+    final distanceFeet = object.distance != null 
+        ? (object.distance! * 3.28084).toStringAsFixed(1) 
+        : '?.?';
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppConstants.spacingXs),
@@ -305,8 +309,10 @@ class _DetectionScreenState extends ConsumerState<DetectionScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  object.displayName,
-                  style: Theme.of(context).textTheme.bodyMedium,
+                  '${object.displayName} - $distanceMeters m ($distanceFeet ft)',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Text(
                   '$confidencePercent confidence',
@@ -315,12 +321,15 @@ class _DetectionScreenState extends ConsumerState<DetectionScreen> {
               ],
             ),
           ),
-          LinearProgressIndicator(
-            value: object.confidence,
-            minHeight: 4,
-            backgroundColor: AppColors.surfaceVariantLight,
-            valueColor: AlwaysStoppedAnimation<Color>(
-              object.isHighConfidence ? AppColors.success : AppColors.warning,
+          SizedBox(
+            width: 80,
+            child: LinearProgressIndicator(
+              value: object.confidence,
+              minHeight: 4,
+              backgroundColor: AppColors.surfaceVariantLight,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                object.isHighConfidence ? AppColors.success : AppColors.warning,
+              ),
             ),
           ),
         ],
@@ -436,7 +445,8 @@ class ObjectDetectionPainter extends CustomPainter {
       canvas.drawRect(rect, paint);
 
       // Draw label background
-      final labelText = '${object.displayName} ${(object.confidence * 100).toStringAsFixed(0)}%';
+      final distance = object.distance != null ? ' ${object.distance!.toStringAsFixed(1)}m' : '';
+      final labelText = '${object.displayName} ${(object.confidence * 100).toStringAsFixed(0)}%$distance';
       final textSpan = TextSpan(
         text: labelText,
         style: const TextStyle(

@@ -6,24 +6,30 @@ import 'package:signsync/core/logging/logger_service.dart';
 import 'package:signsync/models/app_mode.dart';
 import 'package:signsync/models/asl_sign.dart';
 import 'package:signsync/models/detected_object.dart';
+import 'package:signsync/services/ml_orchestrator_service.dart';
 
 /// Service for ML inference operations.
 ///
 /// This service handles loading ML models, processing camera frames,
 /// and returning inference results for ASL detection and object recognition.
+/// It now delegates to the [MlOrchestratorService] for real-time inference.
 class MlInferenceService with ChangeNotifier {
+  final MlOrchestratorService? _orchestrator;
+  
   bool _isModelLoaded = false;
   bool _isProcessing = false;
   InferenceResult? _latestResult;
   AppMode _currentMode = AppMode.translation;
   String? _error;
 
+  MlInferenceService({MlOrchestratorService? orchestrator}) : _orchestrator = orchestrator;
+
   // Getters
-  bool get isModelLoaded => _isModelLoaded;
-  bool get isProcessing => _isProcessing;
+  bool get isModelLoaded => _orchestrator?.isInitialized ?? _isModelLoaded;
+  bool get isProcessing => _orchestrator?.isProcessing ?? _isProcessing;
   InferenceResult? get latestResult => _latestResult;
-  AppMode get currentMode => _currentMode;
-  String? get error => _error;
+  AppMode get currentMode => _orchestrator?.currentMode ?? _currentMode;
+  String? get error => _orchestrator?.error ?? _error;
 
   /// The confidence threshold for considering a detection valid.
   double get confidenceThreshold => 0.6;
@@ -32,6 +38,10 @@ class MlInferenceService with ChangeNotifier {
   ///
   /// This loads the required ML models based on the current mode.
   Future<void> initialize({AppMode mode = AppMode.translation}) async {
+    if (_orchestrator != null) {
+      await _orchestrator!.initialize(initialMode: mode);
+      return;
+    }
     try {
       LoggerService.info('Initializing ML inference service for mode: $mode');
       _error = null;
@@ -68,6 +78,31 @@ class MlInferenceService with ChangeNotifier {
     dynamic image, {
     AppMode? mode,
   }) async {
+    if (_orchestrator != null) {
+      final result = await _orchestrator!.processFrame(image);
+      InferenceResult inferenceResult;
+      
+      if (result.type == MlResultType.asl) {
+        inferenceResult = InferenceResult.success(
+          data: result.dynamicSign ?? result.staticSign,
+          confidence: (result.dynamicSign ?? result.staticSign)?.confidence ?? 0.0,
+        );
+      } else if (result.type == MlResultType.detection) {
+        inferenceResult = InferenceResult.success(
+          data: result.frame,
+          confidence: result.frame?.mostConfident?.confidence ?? 0.0,
+        );
+      } else if (result.type == MlResultType.error) {
+        inferenceResult = InferenceResult.error(result.message ?? 'Unknown error');
+      } else {
+        inferenceResult = InferenceResult(error: result.message);
+      }
+      
+      _latestResult = inferenceResult;
+      notifyListeners();
+      return inferenceResult;
+    }
+
     if (!_isModelLoaded) {
       throw const MlInferenceException(
         'ML model not loaded. Call initialize() first.',
@@ -181,6 +216,10 @@ class MlInferenceService with ChangeNotifier {
 
   /// Switches the inference mode.
   Future<void> switchMode(AppMode mode) async {
+    if (_orchestrator != null) {
+      await _orchestrator!.switchMode(mode);
+      return;
+    }
     if (_currentMode == mode) return;
 
     LoggerService.info('Switching ML mode from $_currentMode to $mode');

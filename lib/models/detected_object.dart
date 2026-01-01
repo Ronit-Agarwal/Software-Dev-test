@@ -12,6 +12,8 @@ class DetectedObject with EquatableMixin {
   final String displayName;
   final double confidence;
   final Rect boundingBox;
+  final double? distance; // Estimated distance in meters
+  final double? depth; // Relative depth score [0, 1]
   final DateTime timestamp;
   final Map<String, dynamic> metadata;
 
@@ -21,6 +23,8 @@ class DetectedObject with EquatableMixin {
     required this.displayName,
     required this.confidence,
     required this.boundingBox,
+    this.distance,
+    this.depth,
     DateTime? timestamp,
     this.metadata = const {},
   }) : timestamp = timestamp ?? DateTime.now();
@@ -30,6 +34,8 @@ class DetectedObject with EquatableMixin {
     required String label,
     required double confidence,
     required Rect boundingBox,
+    double? distance,
+    double? depth,
   }) {
     return DetectedObject(
       id: '${label}_${DateTime.now().millisecondsSinceEpoch}',
@@ -37,6 +43,8 @@ class DetectedObject with EquatableMixin {
       displayName: _formatDisplayName(label),
       confidence: confidence,
       boundingBox: boundingBox,
+      distance: distance,
+      depth: depth,
     );
   }
 
@@ -56,6 +64,8 @@ class DetectedObject with EquatableMixin {
         displayName,
         confidence,
         boundingBox,
+        distance,
+        depth,
         timestamp,
         metadata,
       ];
@@ -66,6 +76,8 @@ class DetectedObject with EquatableMixin {
     String? displayName,
     double? confidence,
     Rect? boundingBox,
+    double? distance,
+    double? depth,
     DateTime? timestamp,
     Map<String, dynamic>? metadata,
   }) {
@@ -75,6 +87,8 @@ class DetectedObject with EquatableMixin {
       displayName: displayName ?? this.displayName,
       confidence: confidence ?? this.confidence,
       boundingBox: boundingBox ?? this.boundingBox,
+      distance: distance ?? this.distance,
+      depth: depth ?? this.depth,
       timestamp: timestamp ?? this.timestamp,
       metadata: metadata ?? this.metadata,
     );
