@@ -10,12 +10,35 @@ import 'package:signsync/utils/constants.dart';
 /// Settings screen for app configuration.
 ///
 /// This screen provides access to app settings including theme,
-/// accessibility options, and preferences.
-class SettingsScreen extends ConsumerWidget {
+/// accessibility options, thresholds, alert preferences, and language selection.
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  // Detection thresholds
+  double _detectionConfidenceThreshold = 0.5;
+  double _objectDistanceThreshold = 5.0;
+  
+  // Alert preferences
+  bool _audioAlertsEnabled = true;
+  bool _vibrationAlertsEnabled = true;
+  bool _spatialAudioEnabled = true;
+  bool _criticalAlertsOnly = false;
+  
+  // TTS settings
+  double _ttsVolume = 0.8;
+  double _ttsSpeechRate = 0.9;
+  double _ttsPitch = 1.0;
+  
+  // Language
+  String _selectedLanguage = 'en-US';
+
+  @override
+  Widget build(BuildContext context) {
     final config = ref.watch(appConfigProvider);
     final isHighContrast = config.highContrastMode;
     final themeMode = config.themeMode;
@@ -69,10 +92,108 @@ class SettingsScreen extends ConsumerWidget {
           _buildSwitchTile(
             title: 'Haptic Feedback',
             subtitle: 'Vibrate on actions',
-            value: true,
-            onChanged: (value) {},
+            value: _vibrationAlertsEnabled,
+            onChanged: (value) {
+              setState(() => _vibrationAlertsEnabled = value);
+            },
             icon: Icons.vibration,
           ),
+          const Divider(),
+
+          // Detection Section
+          _buildSectionHeader('Object Detection'),
+          _buildSliderTile(
+            title: 'Confidence Threshold',
+            subtitle: 'Minimum confidence: ${(_detectionConfidenceThreshold * 100).toStringAsFixed(0)}%',
+            value: _detectionConfidenceThreshold,
+            min: 0.1,
+            max: 0.9,
+            divisions: 8,
+            onChanged: (value) {
+              setState(() => _detectionConfidenceThreshold = value);
+            },
+            icon: Icons.tune,
+          ),
+          _buildSliderTile(
+            title: 'Distance Alert Threshold',
+            subtitle: 'Alert when objects are closer than ${_objectDistanceThreshold.toStringAsFixed(1)} feet',
+            value: _objectDistanceThreshold,
+            min: 2.0,
+            max: 20.0,
+            divisions: 18,
+            onChanged: (value) {
+              setState(() => _objectDistanceThreshold = value);
+            },
+            icon: Icons.straighten,
+          ),
+          const Divider(),
+
+          // Alerts Section
+          _buildSectionHeader('Alerts'),
+          _buildSwitchTile(
+            title: 'Audio Alerts',
+            subtitle: 'Play sounds for detected objects',
+            value: _audioAlertsEnabled,
+            onChanged: (value) {
+              setState(() => _audioAlertsEnabled = value);
+            },
+            icon: Icons.volume_up,
+          ),
+          _buildSwitchTile(
+            title: 'Spatial Audio',
+            subtitle: 'Indicate object direction (left/center/right)',
+            value: _spatialAudioEnabled,
+            onChanged: (value) {
+              setState(() => _spatialAudioEnabled = value);
+            },
+            icon: Icons.surround_sound,
+          ),
+          _buildSwitchTile(
+            title: 'Critical Alerts Only',
+            subtitle: 'Only alert for critical objects (people, vehicles)',
+            value: _criticalAlertsOnly,
+            onChanged: (value) {
+              setState(() => _criticalAlertsOnly = value);
+            },
+            icon: Icons.priority_high,
+          ),
+          const Divider(),
+
+          // Text-to-Speech Section
+          _buildSectionHeader('Voice Settings'),
+          _buildSliderTile(
+            title: 'Voice Volume',
+            subtitle: '${(_ttsVolume * 100).toStringAsFixed(0)}%',
+            value: _ttsVolume,
+            min: 0.0,
+            max: 1.0,
+            divisions: 10,
+            onChanged: (value) {
+              setState(() => _ttsVolume = value);
+              final ttsService = ref.read(ttsServiceProvider);
+              ttsService.setVolume(value);
+            },
+            icon: Icons.volume_up,
+          ),
+          _buildSliderTile(
+            title: 'Speech Rate',
+            subtitle: '${_ttsSpeechRate.toStringAsFixed(1)}x',
+            value: _ttsSpeechRate,
+            min: 0.5,
+            max: 1.5,
+            divisions: 10,
+            onChanged: (value) {
+              setState(() => _ttsSpeechRate = value);
+              final ttsService = ref.read(ttsServiceProvider);
+              ttsService.setSpeechRate(value);
+            },
+            icon: Icons.speed,
+          ),
+          const Divider(),
+
+          // Language Section
+          _buildSectionHeader('Language'),
+          _buildLanguageSelector(),
           const Divider(),
 
           // Permissions Section
@@ -85,7 +206,7 @@ class SettingsScreen extends ConsumerWidget {
           ),
           _buildPermissionTile(
             title: 'Microphone',
-            subtitle: 'Required for sound alerts',
+            subtitle: 'Required for sound alerts and voice input',
             icon: Icons.mic,
             onTap: () => _showPermissionDetails(context, 'microphone'),
           ),
@@ -235,6 +356,65 @@ class SettingsScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildLanguageSelector() {
+    final languages = [
+      {'code': 'en-US', 'name': 'English (US)'},
+      {'code': 'en-GB', 'name': 'English (UK)'},
+      {'code': 'es-ES', 'name': 'Spanish'},
+      {'code': 'fr-FR', 'name': 'French'},
+      {'code': 'de-DE', 'name': 'German'},
+      {'code': 'ja-JP', 'name': 'Japanese'},
+      {'code': 'zh-CN', 'name': 'Chinese (Simplified)'},
+      {'code': 'ko-KR', 'name': 'Korean'},
+    ];
+
+    return ListTile(
+      leading: const Icon(Icons.language),
+      title: const Text('App Language'),
+      subtitle: Text(languages.firstWhere((l) => l['code'] == _selectedLanguage)['name'] as String),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => _showLanguageDialog(languages),
+    );
+  }
+
+  Future<void> _showLanguageDialog(List<Map<String, String>> languages) async {
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Language'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: languages.length,
+            itemBuilder: (context, index) {
+              final language = languages[index];
+              final isSelected = language['code'] == _selectedLanguage;
+              
+              return ListTile(
+                title: Text(language['name']!),
+                trailing: isSelected ? const Icon(Icons.check, color: AppColors.primary) : null,
+                onTap: () => Navigator.pop(context, language['code']),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+
+    if (selected != null) {
+      setState(() => _selectedLanguage = selected);
+      // Apply language change
+      // In a real implementation, you would change the app locale
+    }
   }
 
   Widget _buildPermissionTile({

@@ -44,6 +44,11 @@ class MlOrchestratorService with ChangeNotifier {
   final Map<AppMode, int> _framesPerMode = {};
   int _totalFramesProcessed = 0;
   final Stopwatch _processingStopwatch = Stopwatch();
+  
+  // System stats (for dashboard)
+  double? _memoryUsage;
+  int? _batteryLevel;
+  int? _lastInferenceLatency;
 
   // Configuration
   bool _enableCnn = true;
@@ -67,6 +72,9 @@ class MlOrchestratorService with ChangeNotifier {
   int get queuedResults => _resultQueue.length;
   bool get audioAlertsEnabled => _audioAlertsEnabled;
   bool get spatialAudioEnabled => _spatialAudioEnabled;
+  double? get memoryUsage => _memoryUsage;
+  int? get batteryLevel => _batteryLevel;
+  int? get lastInferenceLatency => _lastInferenceLatency;
 
   /// Creates orchestrator with optional model services (for dependency injection).
   MlOrchestratorService({
@@ -101,6 +109,7 @@ class MlOrchestratorService with ChangeNotifier {
 
       // Initialize models based on mode
       switch (initialMode) {
+        case AppMode.dashboard:
         case AppMode.translation:
           if (_enableCnn) {
             await _cnnService.initialize(modelPath: cnnModelPath ?? 'assets/models/asl_cnn.tflite');
@@ -155,6 +164,7 @@ class MlOrchestratorService with ChangeNotifier {
       MlResult result;
 
       switch (_currentMode) {
+        case AppMode.dashboard:
         case AppMode.translation:
           result = await _processAslFrame(image);
           break;
@@ -174,8 +184,15 @@ class MlOrchestratorService with ChangeNotifier {
       final processingTime = _processingStopwatch.elapsedMilliseconds.toDouble();
       _processingTimes.add(processingTime);
       _totalFramesProcessed++;
+      _lastInferenceLatency = processingTime.toInt();
       
       _framesPerMode[_currentMode] = (_framesPerMode[_currentMode] ?? 0) + 1;
+      
+      // Simulate system stats (in real implementation, use device_info_plus)
+      if (_totalFramesProcessed % 30 == 0) {
+        _memoryUsage = 120 + (_totalFramesProcessed % 50).toDouble();
+        _batteryLevel = (90 - (_totalFramesProcessed / 100)).toInt().clamp(0, 100);
+      }
       
       if (_processingTimes.length > 30) {
         _processingTimes.removeAt(0);

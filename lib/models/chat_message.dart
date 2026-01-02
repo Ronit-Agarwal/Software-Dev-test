@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:equatable/equatable.dart';
 
 /// Represents a chat message in the AI chat feature.
@@ -18,6 +19,36 @@ class ChatMessage with EquatableMixin {
     this.isLoading = false,
     this.error,
   });
+
+  /// Returns true if this is an error message.
+  bool get isError => error != null;
+
+  /// Returns true if this is an AI message.
+  bool get isAi => !isUser;
+
+  /// Converts to JSON for serialization.
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'content': content,
+      'isUser': isUser,
+      'timestamp': timestamp.toIso8601String(),
+      'isLoading': isLoading,
+      'error': error,
+    };
+  }
+
+  /// Creates a ChatMessage from JSON.
+  factory ChatMessage.fromJson(Map<String, dynamic> json) {
+    return ChatMessage(
+      id: json['id'] as String,
+      content: json['content'] as String,
+      isUser: json['isUser'] as bool,
+      timestamp: DateTime.parse(json['timestamp'] as String),
+      isLoading: json['isLoading'] as bool? ?? false,
+      error: json['error'] as String?,
+    );
+  }
 
   /// Creates a user message.
   factory ChatMessage.user({

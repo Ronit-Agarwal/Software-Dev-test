@@ -11,6 +11,7 @@ import 'package:signsync/screens/detection/detection_screen.dart';
 import 'package:signsync/screens/chat/chat_screen.dart';
 import 'package:signsync/screens/settings/settings_screen.dart';
 import 'package:signsync/screens/sound/sound_screen.dart';
+import 'package:signsync/screens/dashboard/dashboard_screen.dart';
 import 'package:signsync/services/permissions_service.dart';
 import 'package:signsync/models/app_mode.dart';
 
@@ -40,6 +41,15 @@ class AppRouter {
         const HomeScreen(),
         state: state,
         screenName: 'Home',
+      ),
+    ),
+    GoRoute(
+      path: '/dashboard',
+      name: 'dashboard',
+      pageBuilder: (context, state) => _buildPage(
+        const DashboardScreen(),
+        state: state,
+        screenName: 'Dashboard',
       ),
     ),
     GoRoute(
@@ -96,9 +106,9 @@ class AppRouter {
   ) {
     final location = state.location;
 
-    // Redirect from root to translation
+    // Redirect from root to dashboard
     if (location == '/') {
-      return '/translation';
+      return '/dashboard';
     }
 
     // Check permissions for camera-dependent routes

@@ -34,6 +34,12 @@ class SignSyncBottomNavBar extends ConsumerWidget {
   List<NavigationDestination> _buildDestinations() {
     return [
       const NavigationDestination(
+        icon: Icon(Icons.dashboard),
+        selectedIcon: Icon(Icons.dashboard),
+        label: 'Home',
+        tooltip: 'Dashboard',
+      ),
+      const NavigationDestination(
         icon: Icon(Icons.translate),
         selectedIcon: Icon(Icons.translate),
         label: 'ASL',
@@ -91,6 +97,10 @@ class CompactBottomNavBar extends StatelessWidget {
   List<BottomNavigationBarItem> _buildItems() {
     return [
       const BottomNavigationBarItem(
+        icon: Icon(Icons.dashboard),
+        label: 'Home',
+      ),
+      const BottomNavigationBarItem(
         icon: Icon(Icons.translate),
         label: 'ASL',
       ),
@@ -136,6 +146,11 @@ class SignSyncNavRail extends ConsumerWidget {
 
   List<NavigationRailDestination> _buildDestinations() {
     return const [
+      NavigationRailDestination(
+        icon: Icon(Icons.dashboard),
+        selectedIcon: Icon(Icons.dashboard),
+        label: Text('Dashboard'),
+      ),
       NavigationRailDestination(
         icon: Icon(Icons.translate),
         selectedIcon: Icon(Icons.translate),

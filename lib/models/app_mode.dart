@@ -3,8 +3,9 @@ import 'package:equatable/equatable.dart';
 /// Represents the current mode of the application.
 ///
 /// The app operates in different modes based on the user's
-/// selected functionality: ASL translation, object detection, or sound alerts.
+/// selected functionality: Dashboard, ASL translation, object detection, sound alerts, or AI chat.
 enum AppMode {
+  dashboard('Dashboard', 'Overview and quick actions'),
   translation('ASL Translation', 'Translate ASL signs to text'),
   detection('Object Detection', 'Identify objects in your surroundings'),
   sound('Sound Alerts', 'Detect and alert for important sounds'),
@@ -18,6 +19,8 @@ enum AppMode {
   /// Returns the route path for this mode.
   String get routePath {
     switch (this) {
+      case AppMode.dashboard:
+        return '/dashboard';
       case AppMode.translation:
         return '/translation';
       case AppMode.detection:
@@ -32,6 +35,8 @@ enum AppMode {
   /// Returns the route name for this mode.
   String get routeName {
     switch (this) {
+      case AppMode.dashboard:
+        return 'dashboard';
       case AppMode.translation:
         return 'translation';
       case AppMode.detection:
@@ -46,20 +51,24 @@ enum AppMode {
   /// Returns the navigation index for this mode.
   int get navigationIndex {
     switch (this) {
-      case AppMode.translation:
+      case AppMode.dashboard:
         return 0;
-      case AppMode.detection:
+      case AppMode.translation:
         return 1;
-      case AppMode.sound:
+      case AppMode.detection:
         return 2;
-      case AppMode.chat:
+      case AppMode.sound:
         return 3;
+      case AppMode.chat:
+        return 4;
     }
   }
 
   /// Gets the next mode in the navigation order.
   AppMode get next {
     switch (this) {
+      case AppMode.dashboard:
+        return AppMode.translation;
       case AppMode.translation:
         return AppMode.detection;
       case AppMode.detection:
@@ -67,15 +76,17 @@ enum AppMode {
       case AppMode.sound:
         return AppMode.chat;
       case AppMode.chat:
-        return AppMode.translation;
+        return AppMode.dashboard;
     }
   }
 
   /// Gets the previous mode in the navigation order.
   AppMode get previous {
     switch (this) {
-      case AppMode.translation:
+      case AppMode.dashboard:
         return AppMode.chat;
+      case AppMode.translation:
+        return AppMode.dashboard;
       case AppMode.detection:
         return AppMode.translation;
       case AppMode.sound:
@@ -89,21 +100,25 @@ enum AppMode {
   static AppMode fromNavigationIndex(int index) {
     switch (index) {
       case 0:
-        return AppMode.translation;
+        return AppMode.dashboard;
       case 1:
-        return AppMode.detection;
+        return AppMode.translation;
       case 2:
-        return AppMode.sound;
+        return AppMode.detection;
       case 3:
+        return AppMode.sound;
+      case 4:
         return AppMode.chat;
       default:
-        return AppMode.translation;
+        return AppMode.dashboard;
     }
   }
 
   /// Returns the mode from a route path.
   static AppMode fromRoutePath(String path) {
     switch (path) {
+      case '/dashboard':
+        return AppMode.dashboard;
       case '/translation':
         return AppMode.translation;
       case '/detection':
@@ -113,7 +128,7 @@ enum AppMode {
       case '/chat':
         return AppMode.chat;
       default:
-        return AppMode.translation;
+        return AppMode.dashboard;
     }
   }
 }
