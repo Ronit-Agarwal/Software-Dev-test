@@ -13,6 +13,8 @@ import 'package:signsync/services/lstm_inference_service.dart';
 import 'package:signsync/services/yolo_detection_service.dart';
 import 'package:signsync/services/ml_orchestrator_service.dart';
 import 'package:signsync/services/tts_service.dart';
+import 'package:signsync/services/asl_translation_service.dart';
+import 'package:signsync/services/audio_service.dart';
 
 /// Root provider for the application configuration.
 final appConfigProvider = ChangeNotifierProvider<AppConfig>((ref) {
@@ -33,6 +35,16 @@ final permissionsServiceProvider = Provider<PermissionsService>((_) {
 /// Provider for camera service.
 final cameraServiceProvider = ChangeNotifierProvider<CameraService>((ref) {
   return CameraService();
+});
+
+/// Provider for ASL translation service (English to ASL).
+final aslTranslationServiceProvider = ChangeNotifierProvider<AslTranslationService>((ref) {
+  return AslTranslationService();
+});
+
+/// Provider for audio service (noise detection).
+final audioServiceProvider = ChangeNotifierProvider<AudioService>((ref) {
+  return AudioService();
 });
 
 /// Provider for frame extractor service.

@@ -7,6 +7,7 @@ import 'package:signsync/services/permissions_service.dart';
 import 'package:signsync/core/logging/logger_service.dart';
 import 'package:signsync/core/theme/colors.dart';
 import 'package:signsync/utils/constants.dart';
+import 'package:signsync/widgets/sound/spectrum_visualizer.dart';
 
 /// Sound alerts screen for noise detection.
 ///
@@ -23,6 +24,7 @@ class _SoundScreenState extends ConsumerState<SoundScreen> {
   bool _isListening = false;
   final List<NoiseEvent> _recentEvents = [];
   double _currentLevel = 0;
+  List<double> _currentSpectrum = List.filled(20, 0.0);
 
   @override
   void initState() {
@@ -69,6 +71,13 @@ class _SoundScreenState extends ConsumerState<SoundScreen> {
         }
       });
 
+      // Subscribe to spectrum
+      audioService.spectrumStream.listen((spectrum) {
+        if (mounted) {
+          setState(() => _currentSpectrum = spectrum);
+        }
+      });
+
       setState(() => _isListening = true);
       LoggerService.info('Sound detection started');
     } catch (e, stack) {
@@ -79,6 +88,7 @@ class _SoundScreenState extends ConsumerState<SoundScreen> {
 
   void _stopListening() {
     LoggerService.info('Stopping sound detection');
+    AnalyticsEvent.logSoundAlertsStopped();
 
     final audioService = ref.read(audioServiceProvider);
     audioService.stopRecording();
@@ -185,6 +195,8 @@ class _SoundScreenState extends ConsumerState<SoundScreen> {
   }
 
   Widget _buildAudioVisualization() {
+    final audioService = ref.watch(audioServiceProvider);
+
     return Container(
       margin: const EdgeInsets.all(AppConstants.spacingMd),
       decoration: BoxDecoration(
@@ -194,50 +206,60 @@ class _SoundScreenState extends ConsumerState<SoundScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Sound Wave Animation
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 100),
-            height: 100,
+          // Frequency Spectrum Visualizer
+          SpectrumVisualizer(
+            spectrum: _currentSpectrum,
+            isListening: _isListening,
+          ),
+          
+          const SizedBox(height: AppConstants.spacingMd),
+          
+          // Noise Threshold Slider
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppConstants.spacingLg),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                5,
-                (index) => _buildSoundWaveBar(index),
-              ),
+              children: [
+                const Icon(Icons.volume_down, size: 16),
+                Expanded(
+                  child: Slider(
+                    value: audioService.noiseThreshold,
+                    onChanged: (value) => audioService.setNoiseThreshold(value),
+                    activeColor: AppColors.primary,
+                  ),
+                ),
+                const Icon(Icons.volume_up, size: 16),
+              ],
             ),
           ),
-          const SizedBox(height: AppConstants.spacingLg),
-          // Status Text
+          
           Text(
-            _isListening ? 'Listening for sounds...' : 'Tap Start to begin',
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
-          const SizedBox(height: AppConstants.spacingSm),
-          // Level Indicator
-          Text(
-            'Level: ${(_currentLevel * 100).toStringAsFixed(0)}%',
+            'Threshold: ${(audioService.noiseThreshold * 100).toStringAsFixed(0)}%',
             style: Theme.of(context).textTheme.bodySmall,
           ),
+
+          const SizedBox(height: AppConstants.spacingMd),
+          
+          // Status and Haptic Control
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                _isListening ? 'Listening...' : 'Tap Start',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+              const SizedBox(width: AppConstants.spacingLg),
+              FilterChip(
+                label: const Text('Haptic'),
+                selected: audioService.hapticEnabled,
+                onSelected: (value) => audioService.setHapticEnabled(value),
+                avatar: Icon(
+                  audioService.hapticEnabled ? Icons.vibration : Icons.phonelink_erase,
+                  size: 16,
+                ),
+              ),
+            ],
+          ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildSoundWaveBar(int index) {
-    final double height = _isListening
-        ? (_currentLevel * 80 + 10) * (1 + index * 0.2)
-        : 10;
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 100),
-      width: 8,
-      height: height.clamp(10, 100),
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      decoration: BoxDecoration(
-        color: _currentLevel > 0.3
-            ? AppColors.warning
-            : Theme.of(context).colorScheme.primary,
-        borderRadius: BorderRadius.circular(4),
       ),
     );
   }
