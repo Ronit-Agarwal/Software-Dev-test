@@ -10,11 +10,13 @@ import 'package:signsync/core/theme/colors.dart';
 import 'package:signsync/utils/constants.dart';
 import 'package:signsync/widgets/common/camera_preview.dart';
 import 'package:signsync/widgets/common/translation_display.dart';
+import 'package:signsync/widgets/translation/text_to_asl_widget.dart';
 
-/// Translation screen for ASL sign detection.
+/// Translation screen for ASL sign detection and translation.
 ///
-/// This screen handles camera input, ML inference for ASL signs,
-/// and displays the translation results.
+/// This screen provides two modes:
+/// 1. ASL to English: Detects signs from camera input.
+/// 2. English to ASL: Translates text/speech to ASL animations.
 class TranslationScreen extends ConsumerStatefulWidget {
   const TranslationScreen({super.key});
 
@@ -31,6 +33,7 @@ class _TranslationScreenState extends ConsumerState<TranslationScreen>
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  late TabController _tabController;
 
   @override
   void initState() {
@@ -42,6 +45,7 @@ class _TranslationScreenState extends ConsumerState<TranslationScreen>
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
+    _tabController = TabController(length: 2, vsync: this);
 
     _checkPermissions();
     LoggerService.info('Translation screen initialized');
@@ -51,12 +55,14 @@ class _TranslationScreenState extends ConsumerState<TranslationScreen>
   void dispose() {
     _pulseController.dispose();
     _manualInputController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
   Future<void> _checkPermissions() async {
     final permissionsService = ref.read(permissionsServiceProvider);
     await permissionsService.requestCameraPermission();
+    await permissionsService.requestMicrophonePermission();
   }
 
   Future<void> _toggleTranslation() async {
@@ -147,23 +153,18 @@ class _TranslationScreenState extends ConsumerState<TranslationScreen>
 
   @override
   Widget build(BuildContext context) {
-    final cameraInitialized = ref.watch(cameraInitializedProvider);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('ASL Translation'),
         centerTitle: true,
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Sign to Text', icon: Icon(Icons.camera_alt)),
+            Tab(text: 'Text to Sign', icon: Icon(Icons.translate)),
+          ],
+        ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.switch_camera),
-            onPressed: () => ref.read(cameraServiceProvider).switchCamera(),
-            tooltip: 'Switch Camera',
-          ),
-          IconButton(
-            icon: const Icon(Icons.text_fields),
-            onPressed: () => _showManualInputDialog(),
-            tooltip: 'Manual Input',
-          ),
           IconButton(
             icon: const Icon(Icons.history),
             onPressed: () => _showHistoryBottomSheet(),
@@ -171,43 +172,56 @@ class _TranslationScreenState extends ConsumerState<TranslationScreen>
           ),
         ],
       ),
-      body: Column(
+      body: TabBarView(
+        controller: _tabController,
+        physics: const NeverScrollableScrollPhysics(), // Prevent accidental swipe during camera use
         children: [
-          // Camera Preview Area
-          Expanded(
-            flex: 3,
-            child: Stack(
-              children: [
-                // Camera Preview
-                if (cameraInitialized)
-                  const CameraPreviewWidget()
-                else
-                  _buildCameraPlaceholder(),
-
-                // Detection Overlay
-                if (_isProcessing)
-                  _buildDetectionOverlay(),
-
-                // Processing Indicator
-                if (_isProcessing)
-                  _buildProcessingIndicator(),
-              ],
-            ),
-          ),
-
-          // Translation Display
-          Expanded(
-            flex: 2,
-            child: TranslationDisplayWidget(
-              currentSign: _currentSign,
-              signHistory: _signHistory,
-            ),
-          ),
-
-          // Control Buttons
-          _buildControlBar(),
+          _buildSignToTextTab(),
+          const TextToAslWidget(),
         ],
       ),
+    );
+  }
+
+  Widget _buildSignToTextTab() {
+    final cameraInitialized = ref.watch(cameraInitializedProvider);
+
+    return Column(
+      children: [
+        // Camera Preview Area
+        Expanded(
+          flex: 3,
+          child: Stack(
+            children: [
+              // Camera Preview
+              if (cameraInitialized)
+                const CameraPreviewWidget()
+              else
+                _buildCameraPlaceholder(),
+
+              // Detection Overlay
+              if (_isProcessing)
+                _buildDetectionOverlay(),
+
+              // Processing Indicator
+              if (_isProcessing)
+                _buildProcessingIndicator(),
+            ],
+          ),
+        ),
+
+        // Translation Display
+        Expanded(
+          flex: 2,
+          child: TranslationDisplayWidget(
+            currentSign: _currentSign,
+            signHistory: _signHistory,
+          ),
+        ),
+
+        // Control Buttons
+        _buildControlBar(),
+      ],
     );
   }
 

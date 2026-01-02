@@ -326,6 +326,16 @@ class AnalyticsEvent {
     log(translationStopped, parameters: {'duration_ms': durationMs});
   }
 
+  /// Logs sound alerts started.
+  static void logSoundAlertsStarted() {
+    log(soundAlertsStarted);
+  }
+
+  /// Logs sound alerts stopped.
+  static void logSoundAlertsStopped() {
+    log(soundAlertsStopped);
+  }
+
   /// Logs object detection started.
   static void logObjectDetectionStarted() {
     log(objectDetectionStarted);
