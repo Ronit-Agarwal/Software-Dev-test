@@ -11,3 +11,4 @@ export 'cnn_inference_service.dart';
 export 'lstm_inference_service.dart';
 export 'yolo_detection_service.dart';
 export 'ml_orchestrator_service.dart';
+export 'tts_service.dart';

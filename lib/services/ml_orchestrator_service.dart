@@ -10,6 +10,7 @@ import 'package:signsync/models/detected_object.dart';
 import 'package:signsync/services/cnn_inference_service.dart';
 import 'package:signsync/services/lstm_inference_service.dart';
 import 'package:signsync/services/yolo_detection_service.dart';
+import 'package:signsync/services/tts_service.dart';
 
 /// Orchestrates multiple ML models (CNN, LSTM, YOLO) based on app mode.
 ///
@@ -20,12 +21,17 @@ class MlOrchestratorService with ChangeNotifier {
   final CnnInferenceService _cnnService;
   final LstmInferenceService _lstmService;
   final YoloDetectionService _yoloService;
+  final TtsService _ttsService;
 
   // State management
   bool _isInitialized = false;
   bool _isProcessing = false;
   AppMode _currentMode = AppMode.translation;
   String? _error;
+
+  // Audio alerts configuration
+  bool _audioAlertsEnabled = true;
+  bool _spatialAudioEnabled = true;
   
   // Results state
   AslSign? _latestAslSign;
@@ -55,19 +61,23 @@ class MlOrchestratorService with ChangeNotifier {
   AslSign? get latestDynamicSign => _latestDynamicSign;
   DetectionFrame? get latestDetection => _latestDetection;
   int get totalFramesProcessed => _totalFramesProcessed;
-  double get averageProcessingTime => _processingTimes.isNotEmpty 
-      ? _processingTimes.reduce((a, b) => a + b) / _processingTimes.length 
+  double get averageProcessingTime => _processingTimes.isNotEmpty
+      ? _processingTimes.reduce((a, b) => a + b) / _processingTimes.length
       : 0.0;
   int get queuedResults => _resultQueue.length;
+  bool get audioAlertsEnabled => _audioAlertsEnabled;
+  bool get spatialAudioEnabled => _spatialAudioEnabled;
 
   /// Creates orchestrator with optional model services (for dependency injection).
   MlOrchestratorService({
     CnnInferenceService? cnnService,
     LstmInferenceService? lstmService,
     YoloDetectionService? yoloService,
+    TtsService? ttsService,
   })  : _cnnService = cnnService ?? CnnInferenceService(),
         _lstmService = lstmService ?? LstmInferenceService(),
-        _yoloService = yoloService ?? YoloDetectionService();
+        _yoloService = yoloService ?? YoloDetectionService(),
+        _ttsService = ttsService ?? TtsService();
 
   /// Initializes the ML orchestrator with all required models.
   Future<void> initialize({
@@ -85,6 +95,9 @@ class MlOrchestratorService with ChangeNotifier {
       LoggerService.info('Initializing ML orchestrator for mode: $initialMode');
       _processingStopwatch.start();
       _currentMode = initialMode;
+
+      // Initialize TTS service for audio alerts
+      await _ttsService.initialize();
 
       // Initialize models based on mode
       switch (initialMode) {
@@ -234,19 +247,24 @@ class MlOrchestratorService with ChangeNotifier {
 
     try {
       final detection = await _yoloService.detect(image);
-      
+
       if (detection != null) {
         _latestDetection = detection;
         final objects = detection.highConfidenceObjects();
         final message = 'Detected ${objects.length} objects';
-        
+
+        // Generate audio alerts for detected objects
+        if (_audioAlertsEnabled && objects.isNotEmpty) {
+          unawaited(_generateAudioAlerts(objects));
+        }
+
         return MlResult.detection(
           frame: detection,
           objects: objects,
           message: message,
         );
       }
-      
+
       return MlResult.detection(
         frame: DetectionFrame(
           id: 'empty_${DateTime.now().millisecondsSinceEpoch}',
@@ -260,6 +278,21 @@ class MlOrchestratorService with ChangeNotifier {
     } catch (e) {
       LoggerService.error('Detection processing failed', error: e);
       return MlResult.error('Detection failed: $e');
+    }
+  }
+
+  /// Generates audio alerts for detected objects.
+  Future<void> _generateAudioAlerts(List<DetectedObject> objects) async {
+    if (!_audioAlertsEnabled) return;
+
+    try {
+      // Apply spatial audio setting to TTS service
+      _ttsService.setSpatialAudioEnabled(_spatialAudioEnabled);
+
+      // Generate alerts for detected objects
+      await _ttsService.generateAlerts(objects);
+    } catch (e) {
+      LoggerService.warn('Failed to generate audio alerts: $e');
     }
   }
 
@@ -344,7 +377,8 @@ class MlOrchestratorService with ChangeNotifier {
         'cnnStats': _cnnService.performanceStats,
         'lstmStats': _lstmService.temporalStats,
         'yoloStats': _yoloService.detectionStats,
-    'queueLength': _resultQueue.length,
+        'ttsStats': _ttsService.statistics,
+        'queueLength': _resultQueue.length,
       };
 
   // Configuration methods
@@ -364,6 +398,36 @@ class MlOrchestratorService with ChangeNotifier {
     _enableYolo = yolo ?? _enableYolo;
     LoggerService.info('Model enabling: CNN=$_enableCnn, LSTM=$_enableLstm, YOLO=$_enableYolo');
   }
+
+  /// Sets audio alerts enabled/disabled.
+  void setAudioAlertsEnabled(bool enabled) {
+    _audioAlertsEnabled = enabled;
+    LoggerService.info('Audio alerts ${enabled ? "enabled" : "disabled"}');
+    notifyListeners();
+  }
+
+  /// Sets spatial audio enabled/disabled.
+  void setSpatialAudioEnabled(bool enabled) {
+    _spatialAudioEnabled = enabled;
+    _ttsService.setSpatialAudioEnabled(enabled);
+    LoggerService.info('Spatial audio ${enabled ? "enabled" : "disabled"}');
+    notifyListeners();
+  }
+
+  /// Sets TTS volume [0.0, 1.0].
+  Future<void> setTtsVolume(double volume) async {
+    await _ttsService.setVolume(volume);
+    notifyListeners();
+  }
+
+  /// Sets TTS speech rate [0.0, 1.0].
+  Future<void> setTtsSpeechRate(double rate) async {
+    await _ttsService.setSpeechRate(rate);
+    notifyListeners();
+  }
+
+  /// Gets TTS service statistics.
+  Map<String, dynamic> get ttsStats => _ttsService.statistics;
 
   void resetModeState() {
     _resetModeState();

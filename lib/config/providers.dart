@@ -12,6 +12,7 @@ import 'package:signsync/services/cnn_inference_service.dart';
 import 'package:signsync/services/lstm_inference_service.dart';
 import 'package:signsync/services/yolo_detection_service.dart';
 import 'package:signsync/services/ml_orchestrator_service.dart';
+import 'package:signsync/services/tts_service.dart';
 
 /// Root provider for the application configuration.
 final appConfigProvider = ChangeNotifierProvider<AppConfig>((ref) {
@@ -90,11 +91,13 @@ final mlOrchestratorProvider = ChangeNotifierProvider<MlOrchestratorService>((re
   final cnnService = ref.watch(cnnInferenceServiceProvider);
   final lstmService = ref.watch(lstmInferenceServiceProvider);
   final yoloService = ref.watch(yoloDetectionServiceProvider);
-  
+  final ttsService = ref.watch(ttsServiceProvider);
+
   return MlOrchestratorService(
     cnnService: cnnService,
     lstmService: lstmService,
     yoloService: yoloService,
+    ttsService: ttsService,
   );
 });
 
@@ -112,6 +115,11 @@ final lstmInferenceServiceProvider = ChangeNotifierProvider<LstmInferenceService
 /// Provider for YOLO detection service (real-time object detection).
 final yoloDetectionServiceProvider = ChangeNotifierProvider<YoloDetectionService>((ref) {
   return YoloDetectionService();
+});
+
+/// Provider for TTS service (text-to-speech audio alerts).
+final ttsServiceProvider = ChangeNotifierProvider<TtsService>((ref) {
+  return TtsService();
 });
 
 /// Provider for latest ML result.
