@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:signsync/core/error/global_error_handler.dart';
 import 'package:signsync/core/logging/logger_service.dart';
 import 'package:signsync/core/navigation/app_router.dart';
@@ -76,7 +77,9 @@ class SignSyncApp extends ConsumerWidget {
       themeMode: config.themeMode,
 
       // Localization
+      locale: config.locale,
       localizationsDelegates: const [
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,

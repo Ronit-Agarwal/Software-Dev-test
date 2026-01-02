@@ -265,6 +265,17 @@ class TtsService with ChangeNotifier {
     }
   }
 
+  /// Sets the TTS language based on Locale.
+  Future<void> setLocale(Locale locale) async {
+    final languageCode = '${locale.languageCode}-${locale.countryCode ?? locale.languageCode.toUpperCase()}';
+    try {
+      await setLanguage(languageCode);
+    } catch (e) {
+      // Fallback to language code only
+      await setLanguage(locale.languageCode);
+    }
+  }
+
   /// Sets the TTS language.
   Future<void> setLanguage(String languageCode) async {
     try {

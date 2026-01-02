@@ -103,6 +103,9 @@ class DetectedObject with EquatableMixin {
   /// Returns true if the confidence is above the threshold (>= 0.7).
   bool get isHighConfidence => confidence >= 0.7;
 
+  /// Returns true if the object is a person.
+  bool get isPerson => label.toLowerCase() == 'person';
+
   @override
   String toString() {
     return 'DetectedObject(label: $displayName, confidence: ${confidence.toStringAsFixed(2)}, box: $boundingBox)';

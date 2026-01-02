@@ -61,6 +61,20 @@ class AslSign with EquatableMixin {
     );
   }
 
+  /// Gets the localized word for the sign.
+  String getLocalizedWord(Locale locale) {
+    // This is a placeholder for language-specific sign mappings.
+    // In a real app, this would use a translation table or API.
+    if (locale.languageCode == 'es') {
+      if (word.toLowerCase() == 'hello') return 'hola';
+      if (word.toLowerCase() == 'thank you') return 'gracias';
+    } else if (locale.languageCode == 'fr') {
+      if (word.toLowerCase() == 'hello') return 'bonjour';
+      if (word.toLowerCase() == 'thank you') return 'merci';
+    }
+    return word;
+  }
+
   @override
   List<Object?> get props => [
         id,

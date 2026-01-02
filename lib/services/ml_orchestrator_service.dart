@@ -11,22 +11,21 @@ import 'package:signsync/services/cnn_inference_service.dart';
 import 'package:signsync/services/lstm_inference_service.dart';
 import 'package:signsync/services/yolo_detection_service.dart';
 import 'package:signsync/services/tts_service.dart';
+import 'package:signsync/services/face_recognition_service.dart';
 
-/// Orchestrates multiple ML models (CNN, LSTM, YOLO) based on app mode.
-///
-/// This service provides a unified interface for ML inference across
-/// ASL translation, object detection, and temporal recognition modes.
+/// Orchestrates multiple ML models (CNN, LSTM, YOLO, Face) based on app mode.
 class MlOrchestratorService with ChangeNotifier {
   // Individual model services
   final CnnInferenceService _cnnService;
   final LstmInferenceService _lstmService;
   final YoloDetectionService _yoloService;
   final TtsService _ttsService;
+  final FaceRecognitionService _faceService;
 
   // State management
   bool _isInitialized = false;
   bool _isProcessing = false;
-  AppMode _currentMode = AppMode.translation;
+  AppMode _currentMode = AppMode.dashboard;
   String? _error;
 
   // Audio alerts configuration
@@ -37,6 +36,7 @@ class MlOrchestratorService with ChangeNotifier {
   AslSign? _latestAslSign;
   AslSign? _latestDynamicSign;
   DetectionFrame? _latestDetection;
+  FaceResult? _latestFace;
   final Queue<MlResult> _resultQueue = Queue<MlResult>();
   
   // Performance monitoring
@@ -54,8 +54,10 @@ class MlOrchestratorService with ChangeNotifier {
   bool _enableCnn = true;
   bool _enableLstm = true;
   bool _enableYolo = true;
+  bool _enableFace = true;
   double _aslConfidenceThreshold = 0.85;
   double _objectConfidenceThreshold = 0.60;
+  double _faceConfidenceThreshold = 0.75;
 
   // Getters
   bool get isInitialized => _isInitialized;
@@ -65,6 +67,7 @@ class MlOrchestratorService with ChangeNotifier {
   AslSign? get latestAslSign => _latestAslSign;
   AslSign? get latestDynamicSign => _latestDynamicSign;
   DetectionFrame? get latestDetection => _latestDetection;
+  FaceResult? get latestFace => _latestFace;
   int get totalFramesProcessed => _totalFramesProcessed;
   double get averageProcessingTime => _processingTimes.isNotEmpty
       ? _processingTimes.reduce((a, b) => a + b) / _processingTimes.length
@@ -72,6 +75,7 @@ class MlOrchestratorService with ChangeNotifier {
   int get queuedResults => _resultQueue.length;
   bool get audioAlertsEnabled => _audioAlertsEnabled;
   bool get spatialAudioEnabled => _spatialAudioEnabled;
+  bool get enableFace => _enableFace;
   double? get memoryUsage => _memoryUsage;
   int? get batteryLevel => _batteryLevel;
   int? get lastInferenceLatency => _lastInferenceLatency;
@@ -82,10 +86,12 @@ class MlOrchestratorService with ChangeNotifier {
     LstmInferenceService? lstmService,
     YoloDetectionService? yoloService,
     TtsService? ttsService,
+    FaceRecognitionService? faceService,
   })  : _cnnService = cnnService ?? CnnInferenceService(),
         _lstmService = lstmService ?? LstmInferenceService(),
         _yoloService = yoloService ?? YoloDetectionService(),
-        _ttsService = ttsService ?? TtsService();
+        _ttsService = ttsService ?? TtsService(),
+        _faceService = faceService ?? FaceRecognitionService();
 
   /// Initializes the ML orchestrator with all required models.
   Future<void> initialize({
@@ -93,6 +99,8 @@ class MlOrchestratorService with ChangeNotifier {
     String? cnnModelPath,
     String? lstmModelPath,
     String? yoloModelPath,
+    String? faceModelPath,
+    Locale? locale,
   }) async {
     if (_isInitialized) {
       LoggerService.warn('ML orchestrator already initialized');
@@ -106,6 +114,9 @@ class MlOrchestratorService with ChangeNotifier {
 
       // Initialize TTS service for audio alerts
       await _ttsService.initialize();
+      if (locale != null) {
+        await _ttsService.setLocale(locale);
+      }
 
       // Initialize models based on mode
       switch (initialMode) {
@@ -124,6 +135,9 @@ class MlOrchestratorService with ChangeNotifier {
         case AppMode.detection:
           if (_enableYolo) {
             await _yoloService.initialize(modelPath: yoloModelPath ?? 'assets/models/yolov11.tflite');
+          }
+          if (_enableFace) {
+            await _faceService.initialize(modelPath: faceModelPath ?? 'assets/models/face_recognition.tflite');
           }
           break;
         case AppMode.sound:
@@ -256,7 +270,7 @@ class MlOrchestratorService with ChangeNotifier {
     );
   }
 
-  /// Processes an object detection frame (YOLO).
+  /// Processes an object detection frame (YOLO) and face recognition.
   Future<MlResult> _processDetectionFrame(CameraImage image) async {
     if (!_enableYolo) {
       return MlResult.skipped();
@@ -268,16 +282,31 @@ class MlOrchestratorService with ChangeNotifier {
       if (detection != null) {
         _latestDetection = detection;
         final objects = detection.highConfidenceObjects();
-        final message = 'Detected ${objects.length} objects';
+        String message = 'Detected ${objects.length} objects';
 
-        // Generate audio alerts for detected objects
+        // Check for persons to run face recognition
+        FaceResult? faceResult;
+        if (_enableFace) {
+          final persons = objects.where((obj) => obj.label == 'person').toList();
+          if (persons.isNotEmpty) {
+            // Run face recognition on the first person detected (for now)
+            faceResult = await _faceService.processFrame(image, faceRect: persons.first.boundingBox);
+            if (faceResult != null && faceResult.confidence >= _faceConfidenceThreshold) {
+              _latestFace = faceResult;
+              message = '${faceResult.profile.name} detected at ${persons.first.distance?.toStringAsFixed(1)} feet';
+            }
+          }
+        }
+
+        // Generate audio alerts for detected objects and faces
         if (_audioAlertsEnabled && objects.isNotEmpty) {
-          unawaited(_generateAudioAlerts(objects));
+          unawaited(_generateAudioAlerts(objects, faceResult));
         }
 
         return MlResult.detection(
           frame: detection,
           objects: objects,
+          faceResult: faceResult,
           message: message,
         );
       }
@@ -298,13 +327,20 @@ class MlOrchestratorService with ChangeNotifier {
     }
   }
 
-  /// Generates audio alerts for detected objects.
-  Future<void> _generateAudioAlerts(List<DetectedObject> objects) async {
+  /// Generates audio alerts for detected objects and faces.
+  Future<void> _generateAudioAlerts(List<DetectedObject> objects, [FaceResult? faceResult]) async {
     if (!_audioAlertsEnabled) return;
 
     try {
       // Apply spatial audio setting to TTS service
       _ttsService.setSpatialAudioEnabled(_spatialAudioEnabled);
+
+      // If a face is recognized, announce it first
+      if (faceResult != null && faceResult.confidence >= _faceConfidenceThreshold) {
+        final distance = objects.firstWhere((obj) => obj.label == 'person', orElse: () => objects.first).distance;
+        final feet = distance != null ? (distance * 3.28084).round() : 3;
+        await _ttsService.speak('${faceResult.profile.name}, $feet feet ahead');
+      }
 
       // Generate alerts for detected objects
       await _ttsService.generateAlerts(objects);
@@ -457,6 +493,41 @@ class MlOrchestratorService with ChangeNotifier {
     _resultQueue.clear();
   }
 
+  /// Sets face recognition enabled/disabled.
+  void setFaceRecognitionEnabled(bool enabled) {
+    _enableFace = enabled;
+    _faceService.setRecognitionEnabled(enabled);
+    LoggerService.info('Face recognition ${enabled ? "enabled" : "disabled"}');
+    notifyListeners();
+  }
+
+  /// Starts face enrollment for a person.
+  void startFaceEnrollment(String name) {
+    _faceService.startEnrollment(name);
+    notifyListeners();
+  }
+
+  /// Cancels face enrollment.
+  void cancelFaceEnrollment() {
+    _faceService.cancelEnrollment();
+    notifyListeners();
+  }
+
+  /// Gets face profiles in the database.
+  List<FaceProfile> getFaceProfiles() => _faceService.profiles;
+
+  /// Updates a face profile.
+  Future<void> updateFaceProfile(String id, {String? label, bool? isPrivate}) async {
+    await _faceService.updateProfile(id, label: label, isPrivate: isPrivate);
+    notifyListeners();
+  }
+
+  /// Deletes a face profile.
+  Future<void> deleteFaceProfile(String id) async {
+    await _faceService.deleteProfile(id);
+    notifyListeners();
+  }
+
   /// Unloads all models to free resources.
   Future<void> unloadAllModels() async {
     LoggerService.info('Unloading all ML models');
@@ -465,6 +536,7 @@ class MlOrchestratorService with ChangeNotifier {
       _cnnService.unloadModel(),
       _lstmService.unloadModel(),
       _yoloService.unloadModel(),
+      _faceService.unloadModel(),
     ]);
 
     _isInitialized = false;
@@ -486,6 +558,7 @@ class MlOrchestratorService with ChangeNotifier {
     _cnnService.dispose();
     _lstmService.dispose();
     _yoloService.dispose();
+    _faceService.dispose();
     _resetState();
     super.dispose();
   }
@@ -498,6 +571,7 @@ class MlResult {
   final AslSign? dynamicSign;
   final DetectionFrame? frame;
   final List<DetectedObject> objects;
+  final FaceResult? faceResult;
   final String? message;
   final DateTime timestamp;
 
@@ -507,6 +581,7 @@ class MlResult {
     this.dynamicSign,
     this.frame,
     this.objects = const [],
+    this.faceResult,
     this.message,
     DateTime? timestamp,
   }) : timestamp = timestamp ?? DateTime.now();
@@ -530,12 +605,14 @@ class MlResult {
   factory MlResult.detection({
     required DetectionFrame frame,
     List<DetectedObject> objects = const [],
+    FaceResult? faceResult,
     String? message,
   }) {
     return MlResult(
       type: MlResultType.detection,
       frame: frame,
       objects: objects,
+      faceResult: faceResult,
       message: message ?? 'Detected ${objects.length} objects',
     );
   }

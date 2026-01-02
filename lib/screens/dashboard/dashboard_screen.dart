@@ -1,28 +1,15 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:signsync/config/providers.dart';
-import 'package:signsync/models/app_mode.dart';
-import 'package:signsync/screens/home/home_screen.dart';
-import 'package:signsync/widgets/common/bottom_nav_bar.dart';
-import 'package:signsync/widgets/dashboard/performance_stats_widget.dart';
-import 'package:signsync/widgets/dashboard/mode_toggle_widget.dart';
-import 'package:signsync/widgets/dashboard/health_indicator_widget.dart';
-import 'package:signsync/widgets/dashboard/quick_action_button.dart';
-import 'package:signsync/utils/constants.dart';
-import 'package:signsync/core/theme/colors.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 /// Dashboard screen with mode switching and real-time stats.
-///
-/// Provides a central hub for navigating between app modes,
-/// viewing performance metrics, and accessing quick actions.
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentMode = ref.watch(appModeProvider);
-    final orchestrator = ref.watch(mlOrchestratorProvider);
+    final orchestrator = ref.watch(mlOrchestratorServiceProvider);
     final cameraService = ref.watch(cameraServiceProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       body: SafeArea(
@@ -32,7 +19,7 @@ class DashboardScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header
-              _buildHeader(context),
+              _buildHeader(context, l10n),
               const SizedBox(height: AppConstants.spacingLg),
 
               // Mode Toggle Section
@@ -53,11 +40,11 @@ class DashboardScreen extends ConsumerWidget {
               const SizedBox(height: AppConstants.spacingLg),
 
               // Quick Actions
-              _buildQuickActions(context, ref),
+              _buildQuickActions(context, ref, l10n),
               const SizedBox(height: AppConstants.spacingLg),
 
               // Current Mode Info
-              _buildCurrentModeCard(context, currentMode, orchestrator),
+              _buildCurrentModeCard(context, currentMode, orchestrator, l10n),
             ],
           ),
         ),
@@ -72,12 +59,12 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Dashboard',
+          l10n.dashboard,
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.bold,
           ),
@@ -93,7 +80,7 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildQuickActions(BuildContext context, WidgetRef ref) {
+  Widget _buildQuickActions(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -113,7 +100,7 @@ class DashboardScreen extends ConsumerWidget {
           children: [
             QuickActionButton(
               icon: Icons.camera_alt,
-              label: 'Camera',
+              label: l10n.aslTranslation,
               color: AppColors.primary,
               onTap: () {
                 ref.read(appModeProvider.notifier).state = AppMode.translation;
@@ -121,7 +108,7 @@ class DashboardScreen extends ConsumerWidget {
             ),
             QuickActionButton(
               icon: Icons.visibility,
-              label: 'Detection',
+              label: l10n.objectDetection,
               color: Colors.orange,
               onTap: () {
                 ref.read(appModeProvider.notifier).state = AppMode.detection;
@@ -129,7 +116,7 @@ class DashboardScreen extends ConsumerWidget {
             ),
             QuickActionButton(
               icon: Icons.volume_up,
-              label: 'Sound',
+              label: l10n.soundDetection,
               color: Colors.blue,
               onTap: () {
                 ref.read(appModeProvider.notifier).state = AppMode.sound;
@@ -137,7 +124,7 @@ class DashboardScreen extends ConsumerWidget {
             ),
             QuickActionButton(
               icon: Icons.chat,
-              label: 'AI Chat',
+              label: l10n.aiChat,
               color: Colors.purple,
               onTap: () {
                 ref.read(appModeProvider.notifier).state = AppMode.chat;
@@ -153,6 +140,7 @@ class DashboardScreen extends ConsumerWidget {
     BuildContext context,
     AppMode mode,
     dynamic orchestrator,
+    AppLocalizations l10n,
   ) {
     return Card(
       elevation: 2,
@@ -170,7 +158,7 @@ class DashboardScreen extends ConsumerWidget {
                 const SizedBox(width: AppConstants.spacingSm),
                 Expanded(
                   child: Text(
-                    'Current Mode: ${mode.displayName}',
+                    'Current Mode: ${_getLocalizedModeName(mode, l10n)}',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -185,10 +173,9 @@ class DashboardScreen extends ConsumerWidget {
                     color: Theme.of(context).colorScheme.primaryContainer,
                     borderRadius: BorderRadius.circular(AppConstants.radiusCircular),
                   ),
-                  child: Text(
+                  child: const Text(
                     'Active',
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.onPrimaryContainer,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
@@ -216,9 +203,9 @@ class DashboardScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: AppConstants.spacingSm),
-                  Text(
+                  const Text(
                     'Processing...',
-                    style: Theme.of(context).textTheme.bodySmall,
+                    style: TextStyle(fontSize: 12),
                   ),
                 ],
               ),
@@ -227,6 +214,16 @@ class DashboardScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  String _getLocalizedModeName(AppMode mode, AppLocalizations l10n) {
+    switch (mode) {
+      case AppMode.translation: return l10n.aslTranslation;
+      case AppMode.detection: return l10n.objectDetection;
+      case AppMode.sound: return l10n.soundDetection;
+      case AppMode.chat: return l10n.aiChat;
+      default: return 'Dashboard';
+    }
   }
 
   IconData _getModeIcon(AppMode mode) {

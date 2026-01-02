@@ -1,0 +1,33 @@
+{
+  "@@locale": "en",
+  "appTitle": "SignSync",
+  "@appTitle": {
+    "description": "The title of the application"
+  },
+  "dashboard": "Dashboard",
+  "aslTranslation": "ASL Translation",
+  "objectDetection": "Object Detection",
+  "soundDetection": "Sound Detection",
+  "aiChat": "AI Chat",
+  "settings": "Settings",
+  "language": "Language",
+  "appearance": "Appearance",
+  "audioAlerts": "Audio Alerts",
+  "spatialAudio": "Spatial Audio",
+  "confidenceThreshold": "Confidence Threshold",
+  "distanceThreshold": "Distance Threshold",
+  "personDetected": "{name} detected at {distance} feet",
+  "@personDetected": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "distance": { "type": "String" }
+    }
+  },
+  "groupOfPeople": "Group of people ahead",
+  "unknownPerson": "Unknown person",
+  "faceEnrollment": "Face Enrollment",
+  "captureFace": "Capture Face",
+  "enrollmentComplete": "Enrollment Complete",
+  "privacyControls": "Privacy Controls",
+  "personRecognition": "Person Recognition"
+}

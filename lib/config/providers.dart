@@ -100,20 +100,30 @@ final mlInferenceServiceProvider = ChangeNotifierProvider<MlInferenceService>((r
   return MlInferenceService(orchestrator: orchestrator);
 });
 
+/// Provider for face recognition service.
+final faceRecognitionServiceProvider = ChangeNotifierProvider<FaceRecognitionService>((ref) {
+  return FaceRecognitionService();
+});
+
 /// Provider for ML orchestrator service (main ML coordinator).
-final mlOrchestratorProvider = ChangeNotifierProvider<MlOrchestratorService>((ref) {
+final mlOrchestratorServiceProvider = ChangeNotifierProvider<MlOrchestratorService>((ref) {
   final cnnService = ref.watch(cnnInferenceServiceProvider);
   final lstmService = ref.watch(lstmInferenceServiceProvider);
   final yoloService = ref.watch(yoloDetectionServiceProvider);
   final ttsService = ref.watch(ttsServiceProvider);
+  final faceService = ref.watch(faceRecognitionServiceProvider);
 
   return MlOrchestratorService(
     cnnService: cnnService,
     lstmService: lstmService,
     yoloService: yoloService,
     ttsService: ttsService,
+    faceService: faceService,
   );
 });
+
+/// Old provider name for backward compatibility
+final mlOrchestratorProvider = mlOrchestratorServiceProvider;
 
 /// Provider for CNN inference service (ResNet-50 for static ASL signs).
 final cnnInferenceServiceProvider = ChangeNotifierProvider<CnnInferenceService>((ref) {
