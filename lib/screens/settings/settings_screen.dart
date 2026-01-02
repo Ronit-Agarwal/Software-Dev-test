@@ -1,16 +1,7 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:signsync/config/app_config.dart';
-import 'package:signsync/config/providers.dart';
-import 'package:signsync/core/logging/logger_service.dart';
-import 'package:signsync/core/theme/app_theme.dart';
-import 'package:signsync/core/theme/colors.dart';
-import 'package:signsync/utils/constants.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:signsync/services/face_recognition_service.dart';
 
 /// Settings screen for app configuration.
-///
-/// This screen provides access to app settings including theme,
-/// accessibility options, thresholds, alert preferences, and language selection.
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
@@ -19,40 +10,42 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  // Detection thresholds
-  double _detectionConfidenceThreshold = 0.5;
-  double _objectDistanceThreshold = 5.0;
+  // Detection thresholds (will sync with orchestrator)
+  double _aslConfidenceThreshold = 0.85;
+  double _objectConfidenceThreshold = 0.60;
   
-  // Alert preferences
-  bool _audioAlertsEnabled = true;
-  bool _vibrationAlertsEnabled = true;
-  bool _spatialAudioEnabled = true;
-  bool _criticalAlertsOnly = false;
-  
-  // TTS settings
-  double _ttsVolume = 0.8;
-  double _ttsSpeechRate = 0.9;
-  double _ttsPitch = 1.0;
-  
-  // Language
-  String _selectedLanguage = 'en-US';
+  // Face Recognition state
+  bool _personRecognitionEnabled = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize with current values from orchestrator
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final orchestrator = ref.read(mlOrchestratorServiceProvider);
+      setState(() {
+        _personRecognitionEnabled = orchestrator.enableFace;
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final config = ref.watch(appConfigProvider);
     final isHighContrast = config.highContrastMode;
     final themeMode = config.themeMode;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: Text(l10n.settings),
         centerTitle: true,
       ),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: AppConstants.spacingMd),
         children: [
           // Appearance Section
-          _buildSectionHeader('Appearance'),
+          _buildSectionHeader(l10n.appearance),
           _buildThemeSelector(themeMode, (mode) {
             ref.read(appConfigProvider).themeMode = mode;
           }),
@@ -78,84 +71,82 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const Divider(),
 
-          // Accessibility Section
-          _buildSectionHeader('Accessibility'),
+          // Language Section
+          _buildSectionHeader(l10n.language),
+          _buildLanguageSelector(config, l10n),
+          const Divider(),
+
+          // Face Recognition Section
+          _buildSectionHeader(l10n.personRecognition),
           _buildSwitchTile(
-            title: 'Reduce Motion',
-            subtitle: 'Minimize animations and transitions',
-            value: config.reduceMotion,
+            title: l10n.personRecognition,
+            subtitle: 'Identify enrolled people',
+            value: _personRecognitionEnabled,
             onChanged: (value) {
-              ref.read(appConfigProvider).reduceMotion = value;
+              setState(() => _personRecognitionEnabled = value);
+              ref.read(mlOrchestratorServiceProvider).setFaceRecognitionEnabled(value);
             },
-            icon: Icons.animation,
+            icon: Icons.face,
           ),
-          _buildSwitchTile(
-            title: 'Haptic Feedback',
-            subtitle: 'Vibrate on actions',
-            value: _vibrationAlertsEnabled,
-            onChanged: (value) {
-              setState(() => _vibrationAlertsEnabled = value);
-            },
-            icon: Icons.vibration,
+          _buildActionTile(
+            title: l10n.faceEnrollment,
+            icon: Icons.person_add,
+            onTap: () => _showEnrollmentDialog(context),
+          ),
+          _buildActionTile(
+            title: l10n.privacyControls,
+            icon: Icons.privacy_tip,
+            onTap: () => _showPrivacyControls(context),
           ),
           const Divider(),
 
           // Detection Section
-          _buildSectionHeader('Object Detection'),
+          _buildSectionHeader(l10n.objectDetection),
           _buildSliderTile(
-            title: 'Confidence Threshold',
-            subtitle: 'Minimum confidence: ${(_detectionConfidenceThreshold * 100).toStringAsFixed(0)}%',
-            value: _detectionConfidenceThreshold,
-            min: 0.1,
-            max: 0.9,
-            divisions: 8,
+            title: l10n.confidenceThreshold,
+            subtitle: 'ASL: ${(_aslConfidenceThreshold * 100).toStringAsFixed(0)}%',
+            value: _aslConfidenceThreshold,
+            min: 0.5,
+            max: 0.95,
             onChanged: (value) {
-              setState(() => _detectionConfidenceThreshold = value);
+              setState(() => _aslConfidenceThreshold = value);
+              ref.read(mlOrchestratorServiceProvider).setConfidenceThresholds(aslThreshold: value);
             },
             icon: Icons.tune,
           ),
           _buildSliderTile(
-            title: 'Distance Alert Threshold',
-            subtitle: 'Alert when objects are closer than ${_objectDistanceThreshold.toStringAsFixed(1)} feet',
-            value: _objectDistanceThreshold,
-            min: 2.0,
-            max: 20.0,
-            divisions: 18,
+            title: 'Object Detection Threshold',
+            subtitle: 'Objects: ${(_objectConfidenceThreshold * 100).toStringAsFixed(0)}%',
+            value: _objectConfidenceThreshold,
+            min: 0.3,
+            max: 0.9,
             onChanged: (value) {
-              setState(() => _objectDistanceThreshold = value);
+              setState(() => _objectConfidenceThreshold = value);
+              ref.read(mlOrchestratorServiceProvider).setConfidenceThresholds(objectThreshold: value);
             },
-            icon: Icons.straighten,
+            icon: Icons.sensors,
           ),
           const Divider(),
 
           // Alerts Section
           _buildSectionHeader('Alerts'),
           _buildSwitchTile(
-            title: 'Audio Alerts',
+            title: l10n.audioAlerts,
             subtitle: 'Play sounds for detected objects',
-            value: _audioAlertsEnabled,
+            value: ref.watch(mlOrchestratorServiceProvider).audioAlertsEnabled,
             onChanged: (value) {
-              setState(() => _audioAlertsEnabled = value);
+              ref.read(mlOrchestratorServiceProvider).setAudioAlertsEnabled(value);
             },
             icon: Icons.volume_up,
           ),
           _buildSwitchTile(
-            title: 'Spatial Audio',
-            subtitle: 'Indicate object direction (left/center/right)',
-            value: _spatialAudioEnabled,
+            title: l10n.spatialAudio,
+            subtitle: 'Indicate object direction',
+            value: ref.watch(mlOrchestratorServiceProvider).spatialAudioEnabled,
             onChanged: (value) {
-              setState(() => _spatialAudioEnabled = value);
+              ref.read(mlOrchestratorServiceProvider).setSpatialAudioEnabled(value);
             },
             icon: Icons.surround_sound,
-          ),
-          _buildSwitchTile(
-            title: 'Critical Alerts Only',
-            subtitle: 'Only alert for critical objects (people, vehicles)',
-            value: _criticalAlertsOnly,
-            onChanged: (value) {
-              setState(() => _criticalAlertsOnly = value);
-            },
-            icon: Icons.priority_high,
           ),
           const Divider(),
 
@@ -358,29 +349,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _buildLanguageSelector() {
+  Widget _buildLanguageSelector(AppConfig config, AppLocalizations l10n) {
     final languages = [
-      {'code': 'en-US', 'name': 'English (US)'},
-      {'code': 'en-GB', 'name': 'English (UK)'},
-      {'code': 'es-ES', 'name': 'Spanish'},
-      {'code': 'fr-FR', 'name': 'French'},
-      {'code': 'de-DE', 'name': 'German'},
-      {'code': 'ja-JP', 'name': 'Japanese'},
-      {'code': 'zh-CN', 'name': 'Chinese (Simplified)'},
-      {'code': 'ko-KR', 'name': 'Korean'},
+      {'code': 'en', 'name': 'English', 'locale': const Locale('en', 'US')},
+      {'code': 'es', 'name': 'Español', 'locale': const Locale('es', 'ES')},
+      {'code': 'fr', 'name': 'Français', 'locale': const Locale('fr', 'FR')},
     ];
+
+    final currentLanguage = languages.firstWhere(
+      (l) => (l['locale'] as Locale).languageCode == config.locale.languageCode,
+      orElse: () => languages[0],
+    );
 
     return ListTile(
       leading: const Icon(Icons.language),
-      title: const Text('App Language'),
-      subtitle: Text(languages.firstWhere((l) => l['code'] == _selectedLanguage)['name'] as String),
+      title: Text(l10n.language),
+      subtitle: Text(currentLanguage['name'] as String),
       trailing: const Icon(Icons.chevron_right),
-      onTap: () => _showLanguageDialog(languages),
+      onTap: () => _showLanguageDialog(config, languages),
     );
   }
 
-  Future<void> _showLanguageDialog(List<Map<String, String>> languages) async {
-    final selected = await showDialog<String>(
+  Future<void> _showLanguageDialog(AppConfig config, List<Map<String, Object>> languages) async {
+    final selected = await showDialog<Locale>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Select Language'),
@@ -391,30 +382,100 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             itemCount: languages.length,
             itemBuilder: (context, index) {
               final language = languages[index];
-              final isSelected = language['code'] == _selectedLanguage;
+              final locale = language['locale'] as Locale;
+              final isSelected = locale.languageCode == config.locale.languageCode;
               
               return ListTile(
-                title: Text(language['name']!),
+                title: Text(language['name'] as String),
                 trailing: isSelected ? const Icon(Icons.check, color: AppColors.primary) : null,
-                onTap: () => Navigator.pop(context, language['code']),
+                onTap: () => Navigator.pop(context, locale),
               );
             },
           ),
+        ),
+      ),
+    );
+
+    if (selected != null) {
+      config.locale = selected;
+      // Update TTS language
+      ref.read(ttsServiceProvider).setLocale(selected);
+    }
+  }
+
+  void _showEnrollmentDialog(BuildContext context) {
+    final nameController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Face Enrollment'),
+        content: TextField(
+          controller: nameController,
+          decoration: const InputDecoration(labelText: 'Name'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
+          ElevatedButton(
+            onPressed: () {
+              if (nameController.text.isNotEmpty) {
+                ref.read(mlOrchestratorServiceProvider).startFaceEnrollment(nameController.text);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Starting enrollment for ${nameController.text}')),
+                );
+              }
+            },
+            child: const Text('Start'),
+          ),
         ],
       ),
     );
+  }
 
-    if (selected != null) {
-      setState(() => _selectedLanguage = selected);
-      // Apply language change
-      // In a real implementation, you would change the app locale
-    }
+  void _showPrivacyControls(BuildContext context) {
+    final orchestrator = ref.read(mlOrchestratorServiceProvider);
+    final profiles = orchestrator.getFaceProfiles();
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Privacy Controls'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: profiles.isEmpty 
+              ? const Text('No enrolled faces')
+              : ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: profiles.length,
+                  itemBuilder: (context, index) {
+                    final profile = profiles[index];
+                    return ListTile(
+                      title: Text(profile.name),
+                      subtitle: Text(profile.label),
+                      trailing: Switch(
+                        value: !profile.isPrivate,
+                        onChanged: (value) async {
+                          await orchestrator.updateFaceProfile(profile.id, isPrivate: !value);
+                          setDialogState(() {});
+                        },
+                      ),
+                    );
+                  },
+                ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildPermissionTile({
