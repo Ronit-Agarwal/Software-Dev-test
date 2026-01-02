@@ -109,10 +109,6 @@ class AppConfig with ChangeNotifier {
   }
 }
 
-/// Provider for the application configuration.
-final appConfigProvider = ChangeNotifierProvider<AppConfig>((_) {
-  return AppConfig();
-});
 
 /// Extension on ThemeMode for readable strings.
 extension ThemeModeExtension on ThemeMode {

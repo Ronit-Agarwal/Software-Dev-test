@@ -1,6 +1,19 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:signsync/config/providers.dart';
+import 'package:signsync/core/theme/colors.dart';
+import 'package:signsync/models/app_mode.dart';
+import 'package:signsync/services/camera_service.dart';
+import 'package:signsync/services/ml_orchestrator_service.dart';
+import 'package:signsync/utils/constants.dart';
+import 'package:signsync/widgets/common/bottom_nav_bar.dart';
+import 'package:signsync/widgets/dashboard/health_indicator_widget.dart';
+import 'package:signsync/widgets/dashboard/mode_toggle_widget.dart';
+import 'package:signsync/widgets/dashboard/performance_stats_widget.dart';
+import 'package:signsync/widgets/dashboard/quick_action_button.dart';
 
-/// Dashboard screen with mode switching and real-time stats.
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
@@ -18,15 +31,10 @@ class DashboardScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
-              _buildHeader(context, l10n),
+              _Header(l10n: l10n),
               const SizedBox(height: AppConstants.spacingLg),
-
-              // Mode Toggle Section
               const ModeToggleWidget(),
               const SizedBox(height: AppConstants.spacingLg),
-
-              // Performance Stats
               PerformanceStatsWidget(
                 fps: cameraService.currentFps,
                 latency: orchestrator.lastInferenceLatency ?? 0,
@@ -34,17 +42,11 @@ class DashboardScreen extends ConsumerWidget {
                 batteryLevel: orchestrator.batteryLevel ?? 100,
               ),
               const SizedBox(height: AppConstants.spacingLg),
-
-              // Health Indicators
               const HealthIndicatorWidget(),
               const SizedBox(height: AppConstants.spacingLg),
-
-              // Quick Actions
-              _buildQuickActions(context, ref, l10n),
+              _QuickActions(l10n: l10n),
               const SizedBox(height: AppConstants.spacingLg),
-
-              // Current Mode Info
-              _buildCurrentModeCard(context, currentMode, orchestrator, l10n),
+              _CurrentModeCard(mode: currentMode, orchestrator: orchestrator, l10n: l10n),
             ],
           ),
         ),
@@ -52,43 +54,60 @@ class DashboardScreen extends ConsumerWidget {
       bottomNavigationBar: SignSyncBottomNavBar(
         currentIndex: currentMode.navigationIndex,
         onIndexChanged: (index) {
-          final newMode = AppMode.fromNavigationIndex(index);
-          ref.read(appModeProvider.notifier).state = newMode;
+          HapticFeedback.selectionClick();
+          ref.read(appModeProvider.notifier).state = AppMode.fromNavigationIndex(index);
         },
       ),
     );
   }
+}
 
-  Widget _buildHeader(BuildContext context, AppLocalizations l10n) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          l10n.dashboard,
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.bold,
+class _Header extends StatelessWidget {
+  final AppLocalizations l10n;
+
+  const _Header({required this.l10n});
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      header: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.dashboard,
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
           ),
-        ),
-        const SizedBox(height: AppConstants.spacingXs),
-        Text(
-          'Manage your SignSync experience',
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          const SizedBox(height: AppConstants.spacingXs),
+          Text(
+            'Manage your SignSync experience',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
+}
 
-  Widget _buildQuickActions(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+class _QuickActions extends ConsumerWidget {
+  final AppLocalizations l10n;
+
+  const _QuickActions({required this.l10n});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Quick Actions',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+                fontWeight: FontWeight.bold,
+              ),
         ),
         const SizedBox(height: AppConstants.spacingMd),
         GridView.count(
@@ -103,6 +122,7 @@ class DashboardScreen extends ConsumerWidget {
               label: l10n.aslTranslation,
               color: AppColors.primary,
               onTap: () {
+                HapticFeedback.selectionClick();
                 ref.read(appModeProvider.notifier).state = AppMode.translation;
               },
             ),
@@ -111,6 +131,7 @@ class DashboardScreen extends ConsumerWidget {
               label: l10n.objectDetection,
               color: Colors.orange,
               onTap: () {
+                HapticFeedback.selectionClick();
                 ref.read(appModeProvider.notifier).state = AppMode.detection;
               },
             ),
@@ -119,6 +140,7 @@ class DashboardScreen extends ConsumerWidget {
               label: l10n.soundDetection,
               color: Colors.blue,
               onTap: () {
+                HapticFeedback.selectionClick();
                 ref.read(appModeProvider.notifier).state = AppMode.sound;
               },
             ),
@@ -127,6 +149,7 @@ class DashboardScreen extends ConsumerWidget {
               label: l10n.aiChat,
               color: Colors.purple,
               onTap: () {
+                HapticFeedback.selectionClick();
                 ref.read(appModeProvider.notifier).state = AppMode.chat;
               },
             ),
@@ -135,13 +158,21 @@ class DashboardScreen extends ConsumerWidget {
       ],
     );
   }
+}
 
-  Widget _buildCurrentModeCard(
-    BuildContext context,
-    AppMode mode,
-    dynamic orchestrator,
-    AppLocalizations l10n,
-  ) {
+class _CurrentModeCard extends StatelessWidget {
+  final AppMode mode;
+  final MlOrchestratorService orchestrator;
+  final AppLocalizations l10n;
+
+  const _CurrentModeCard({
+    required this.mode,
+    required this.orchestrator,
+    required this.l10n,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Card(
       elevation: 2,
       child: Padding(
@@ -152,16 +183,16 @@ class DashboardScreen extends ConsumerWidget {
             Row(
               children: [
                 Icon(
-                  _getModeIcon(mode),
+                  _modeIcon(mode),
                   color: Theme.of(context).colorScheme.primary,
                 ),
                 const SizedBox(width: AppConstants.spacingSm),
                 Expanded(
                   child: Text(
-                    'Current Mode: ${_getLocalizedModeName(mode, l10n)}',
+                    'Current Mode: ${_modeLabel(mode, l10n)}',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                 ),
                 Container(
@@ -187,8 +218,8 @@ class DashboardScreen extends ConsumerWidget {
             Text(
               mode.description,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
             ),
             if (orchestrator.isProcessing) ...[
               const SizedBox(height: AppConstants.spacingMd),
@@ -216,18 +247,25 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  String _getLocalizedModeName(AppMode mode, AppLocalizations l10n) {
+  static String _modeLabel(AppMode mode, AppLocalizations l10n) {
     switch (mode) {
-      case AppMode.translation: return l10n.aslTranslation;
-      case AppMode.detection: return l10n.objectDetection;
-      case AppMode.sound: return l10n.soundDetection;
-      case AppMode.chat: return l10n.aiChat;
-      default: return 'Dashboard';
+      case AppMode.dashboard:
+        return l10n.dashboard;
+      case AppMode.translation:
+        return l10n.aslTranslation;
+      case AppMode.detection:
+        return l10n.objectDetection;
+      case AppMode.sound:
+        return l10n.soundDetection;
+      case AppMode.chat:
+        return l10n.aiChat;
     }
   }
 
-  IconData _getModeIcon(AppMode mode) {
+  static IconData _modeIcon(AppMode mode) {
     switch (mode) {
+      case AppMode.dashboard:
+        return Icons.dashboard;
       case AppMode.translation:
         return Icons.translate;
       case AppMode.detection:

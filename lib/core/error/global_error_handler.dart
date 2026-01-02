@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:signsync/core/error/exceptions.dart';
+import 'package:signsync/core/privacy/privacy_settings.dart';
 import 'package:signsync/core/logging/logger_service.dart';
 import 'package:signsync/utils/helpers.dart';
 
@@ -83,6 +84,8 @@ class GlobalErrorHandler {
     StackTrace? stackTrace,
     dynamic hint,
   }) async {
+    if (!PrivacySettings.crashReportingEnabled) return;
+
     try {
       await Sentry.captureException(
         error,
@@ -99,6 +102,8 @@ class GlobalErrorHandler {
     Object error, {
     Map<String, dynamic>? extra,
   }) async {
+    if (!PrivacySettings.crashReportingEnabled) return;
+
     try {
       await Sentry.captureException(
         error,
@@ -119,6 +124,8 @@ class GlobalErrorHandler {
     SentryLevel level = SentryLevel.info,
     Map<String, dynamic>? extra,
   }) async {
+    if (!PrivacySettings.crashReportingEnabled) return;
+
     try {
       await Sentry.captureMessage(
         message,
@@ -140,6 +147,8 @@ class GlobalErrorHandler {
     String message, {
     Map<String, dynamic>? data,
   }) {
+    if (!PrivacySettings.crashReportingEnabled) return;
+
     Sentry.addBreadcrumb(
       SentryBreadcrumb(
         category: category,
@@ -152,6 +161,8 @@ class GlobalErrorHandler {
 
   /// Sets the user context for crash reports.
   static void setUserContext(String? userId, String? email) {
+    if (!PrivacySettings.crashReportingEnabled) return;
+
     Sentry.configureScope((scope) {
       scope.user = SentryUser(
         id: userId,
@@ -162,6 +173,8 @@ class GlobalErrorHandler {
 
   /// Clears the user context.
   static void clearUserContext() {
+    if (!PrivacySettings.crashReportingEnabled) return;
+
     Sentry.configureScope((scope) {
       scope.user = null;
     });
@@ -169,6 +182,8 @@ class GlobalErrorHandler {
 
   /// Sets a tag for all future events.
   static void setTag(String key, String value) {
+    if (!PrivacySettings.crashReportingEnabled) return;
+
     Sentry.configureScope((scope) {
       scope.setTag(key, value);
     });
@@ -176,6 +191,8 @@ class GlobalErrorHandler {
 
   /// Removes a tag.
   static void removeTag(String key) {
+    if (!PrivacySettings.crashReportingEnabled) return;
+
     Sentry.configureScope((scope) {
       scope.removeTag(key);
     });
@@ -183,6 +200,8 @@ class GlobalErrorHandler {
 
   /// Clears all breadcrumbs.
   static void clearBreadcrumbs() {
+    if (!PrivacySettings.crashReportingEnabled) return;
+
     Sentry.configureScope((scope) {
       scope.clearBreadcrumbs();
     });
@@ -203,6 +222,11 @@ class GlobalErrorHandler {
     String operation,
     Future<void> Function() function,
   ) async {
+    if (!PrivacySettings.crashReportingEnabled) {
+      await function();
+      return;
+    }
+
     final transaction = Sentry.startTransaction(
       operation,
       'task',

@@ -115,6 +115,38 @@ class AslSign with EquatableMixin {
     );
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'letter': letter,
+      'word': word,
+      'description': description,
+      'confidence': confidence,
+      'durationMs': duration?.inMilliseconds,
+      'imageUrl': imageUrl,
+      'synonyms': synonyms,
+      'category': category,
+      'timestamp': timestamp.toIso8601String(),
+    };
+  }
+
+  factory AslSign.fromJson(Map<String, dynamic> json) {
+    return AslSign(
+      id: json['id'] as String? ?? 'unknown',
+      letter: json['letter'] as String? ?? '',
+      word: json['word'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      confidence: (json['confidence'] as num?)?.toDouble() ?? 0.0,
+      duration: json['durationMs'] != null
+          ? Duration(milliseconds: (json['durationMs'] as num).toInt())
+          : null,
+      imageUrl: json['imageUrl'] as String?,
+      synonyms: (json['synonyms'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+      category: json['category'] as String? ?? 'unknown',
+      timestamp: json['timestamp'] != null ? DateTime.tryParse(json['timestamp'].toString()) : null,
+    );
+  }
+
   @override
   String toString() {
     return 'AslSign(letter: $letter, word: $word, confidence: ${confidence.toStringAsFixed(2)})';

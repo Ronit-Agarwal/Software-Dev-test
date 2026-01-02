@@ -37,7 +37,9 @@ class ModeToggleWidget extends ConsumerWidget {
               mainAxisSpacing: AppConstants.spacingSm,
               crossAxisSpacing: AppConstants.spacingSm,
               childAspectRatio: 1.3,
-              children: AppMode.values.map((mode) {
+              children: AppMode.values
+                  .where((mode) => mode != AppMode.dashboard)
+                  .map((mode) {
                 final isSelected = mode == currentMode;
                 return _buildModeButton(
                   context,
@@ -118,6 +120,8 @@ class ModeToggleWidget extends ConsumerWidget {
 
   IconData _getModeIcon(AppMode mode) {
     switch (mode) {
+      case AppMode.dashboard:
+        return Icons.dashboard;
       case AppMode.translation:
         return Icons.translate;
       case AppMode.detection:
@@ -131,6 +135,8 @@ class ModeToggleWidget extends ConsumerWidget {
 
   Color _getModeColor(AppMode mode) {
     switch (mode) {
+      case AppMode.dashboard:
+        return AppColors.primary;
       case AppMode.translation:
         return AppColors.primary;
       case AppMode.detection:
@@ -144,6 +150,8 @@ class ModeToggleWidget extends ConsumerWidget {
 
   String _getModeLabel(AppMode mode) {
     switch (mode) {
+      case AppMode.dashboard:
+        return 'Dashboard';
       case AppMode.translation:
         return 'ASL\nTranslation';
       case AppMode.detection:

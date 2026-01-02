@@ -483,6 +483,32 @@ class LstmInferenceService with ChangeNotifier {
         'cnnPerformance': _cnnService.performanceStats,
       };
 
+  List<String> get dynamicSigns => List.unmodifiable(_dynamicSigns);
+
+  @visibleForTesting
+  Float32List extractCnnFeaturesForTest(AslSign sign) => _extractCnnFeatures(sign);
+
+  @visibleForTesting
+  void addFrameToBufferForTest(dynamic image, AslSign sign) => _addFrameToBuffer(image, sign);
+
+  @visibleForTesting
+  bool isSequenceValidForInferenceForTest() => _isSequenceValidForInference();
+
+  @visibleForTesting
+  void applyTemporalSmoothingForTest(Float32List sequence, int validLength) =>
+      _applyTemporalSmoothing(sequence, validLength);
+
+  @visibleForTesting
+  void updateSignCounterForTest(String sign) => _updateSignCounter(sign);
+
+  @visibleForTesting
+  Map<String, int> get signCounterForTest => Map.unmodifiable(_signCounter);
+
+  @visibleForTesting
+  void addInferenceTimeForTest(double ms) {
+    _inferenceTimes.add(ms);
+  }
+
   /// Resets temporal state.
   void _resetState() {
     _frameBuffer.clear();

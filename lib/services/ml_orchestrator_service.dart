@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:math';
+
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:signsync/core/error/exceptions.dart';
@@ -12,6 +14,7 @@ import 'package:signsync/services/lstm_inference_service.dart';
 import 'package:signsync/services/yolo_detection_service.dart';
 import 'package:signsync/services/tts_service.dart';
 import 'package:signsync/services/face_recognition_service.dart';
+import 'package:signsync/services/result_cache_service.dart';
 
 /// Orchestrates multiple ML models (CNN, LSTM, YOLO, Face) based on app mode.
 class MlOrchestratorService with ChangeNotifier {
@@ -21,6 +24,7 @@ class MlOrchestratorService with ChangeNotifier {
   final YoloDetectionService _yoloService;
   final TtsService _ttsService;
   final FaceRecognitionService _faceService;
+  final ResultCacheService _resultCache;
 
   // State management
   bool _isInitialized = false;
@@ -49,6 +53,11 @@ class MlOrchestratorService with ChangeNotifier {
   double? _memoryUsage;
   int? _batteryLevel;
   int? _lastInferenceLatency;
+
+  // Adaptive inference (battery/performance)
+  bool _adaptiveInferenceEnabled = true;
+  int _framesToSkip = 0;
+  int _targetLatencyMs = 100;
 
   // Configuration
   bool _enableCnn = true;
@@ -87,11 +96,13 @@ class MlOrchestratorService with ChangeNotifier {
     YoloDetectionService? yoloService,
     TtsService? ttsService,
     FaceRecognitionService? faceService,
+    ResultCacheService? resultCache,
   })  : _cnnService = cnnService ?? CnnInferenceService(),
         _lstmService = lstmService ?? LstmInferenceService(),
         _yoloService = yoloService ?? YoloDetectionService(),
         _ttsService = ttsService ?? TtsService(),
-        _faceService = faceService ?? FaceRecognitionService();
+        _faceService = faceService ?? FaceRecognitionService(),
+        _resultCache = resultCache ?? ResultCacheService();
 
   /// Initializes the ML orchestrator with all required models.
   Future<void> initialize({
@@ -170,9 +181,13 @@ class MlOrchestratorService with ChangeNotifier {
       return MlResult.skipped();
     }
 
+    if (_adaptiveInferenceEnabled && _framesToSkip > 0) {
+      _framesToSkip--;
+      return MlResult.skipped();
+    }
+
     _isProcessing = true;
     _processingStopwatch.reset();
-    final frameStartTime = DateTime.now();
 
     try {
       MlResult result;
@@ -199,7 +214,25 @@ class MlOrchestratorService with ChangeNotifier {
       _processingTimes.add(processingTime);
       _totalFramesProcessed++;
       _lastInferenceLatency = processingTime.toInt();
-      
+
+      if (_adaptiveInferenceEnabled) {
+        if (processingTime > _targetLatencyMs * 2) {
+          _framesToSkip = 2;
+        } else if (processingTime > _targetLatencyMs) {
+          _framesToSkip = 1;
+        } else {
+          _framesToSkip = 0;
+        }
+      }
+
+      final signToCache = result.dynamicSign ?? result.staticSign;
+      if (signToCache != null) {
+        unawaited(_resultCache.cacheTranslationSign(signToCache));
+      }
+      if (result.type == MlResultType.detection && result.frame != null && result.objects.isNotEmpty) {
+        unawaited(_resultCache.cacheDetectionFrame(result.frame!));
+      }
+
       _framesPerMode[_currentMode] = (_framesPerMode[_currentMode] ?? 0) + 1;
       
       // Simulate system stats (in real implementation, use device_info_plus)

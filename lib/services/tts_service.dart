@@ -13,6 +13,8 @@ import 'package:signsync/models/detected_object.dart';
 class TtsService with ChangeNotifier {
   FlutterTts? _flutterTts;
   bool _isInitialized = false;
+
+  TtsService({FlutterTts? flutterTts}) : _flutterTts = flutterTts;
   bool _isSpeaking = false;
   String? _error;
   String? _currentLanguage;
@@ -96,7 +98,7 @@ class TtsService with ChangeNotifier {
       LoggerService.info('Initializing TTS service');
       _error = null;
 
-      _flutterTts = FlutterTts();
+      _flutterTts ??= FlutterTts();
 
       // Set default language
       await _flutterTts!.setLanguage('en-US');

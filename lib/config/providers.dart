@@ -1,26 +1,68 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:permission_handler/permission_handler.dart';
+
 import 'package:signsync/config/app_config.dart';
 import 'package:signsync/core/navigation/app_router.dart';
 import 'package:signsync/core/theme/app_theme.dart';
-import 'package:signsync/services/permissions_service.dart';
 import 'package:signsync/models/app_mode.dart';
 import 'package:signsync/models/camera_state.dart';
-import 'package:signsync/services/camera_service.dart';
-import 'package:signsync/services/frame_extractor.dart';
-import 'package:signsync/services/cnn_inference_service.dart';
-import 'package:signsync/services/lstm_inference_service.dart';
-import 'package:signsync/services/yolo_detection_service.dart';
-import 'package:signsync/services/ml_orchestrator_service.dart';
-import 'package:signsync/services/tts_service.dart';
 import 'package:signsync/services/asl_translation_service.dart';
 import 'package:signsync/services/audio_service.dart';
-import 'package:signsync/services/gemini_ai_service.dart';
+import 'package:signsync/services/camera_service.dart';
 import 'package:signsync/services/chat_history_service.dart';
+import 'package:signsync/services/cnn_inference_service.dart';
+import 'package:signsync/services/data_management_service.dart';
+import 'package:signsync/services/encryption_service.dart';
+import 'package:signsync/services/face_recognition_service.dart';
+import 'package:signsync/services/frame_extractor.dart';
+import 'package:signsync/services/gemini_ai_service.dart';
+import 'package:signsync/services/lstm_inference_service.dart';
+import 'package:signsync/services/ml_inference_service.dart';
+import 'package:signsync/services/ml_orchestrator_service.dart';
+import 'package:signsync/services/permission_audit_service.dart';
+import 'package:signsync/services/permissions_service.dart';
+import 'package:signsync/services/privacy_config_service.dart';
+import 'package:signsync/services/result_cache_service.dart';
+import 'package:signsync/services/secure_storage_service.dart';
+import 'package:signsync/services/tts_service.dart';
+import 'package:signsync/services/yolo_detection_service.dart';
 
 /// Root provider for the application configuration.
 final appConfigProvider = ChangeNotifierProvider<AppConfig>((ref) {
   return AppConfig();
+});
+
+final secureStorageServiceProvider = Provider<SecureStorageService>((ref) {
+  return SecureStorageService();
+});
+
+final encryptionServiceProvider = Provider<EncryptionService>((ref) {
+  return EncryptionService(secureStorage: ref.read(secureStorageServiceProvider));
+});
+
+final privacyConfigServiceProvider = ChangeNotifierProvider<PrivacyConfigService>((ref) {
+  final service = PrivacyConfigService();
+  Future.microtask(service.initialize);
+  return service;
+});
+
+final permissionAuditServiceProvider = Provider<PermissionAuditService>((ref) {
+  return PermissionAuditService(encryption: ref.read(encryptionServiceProvider));
+});
+
+final resultCacheServiceProvider = ChangeNotifierProvider<ResultCacheService>((ref) {
+  return ResultCacheService(encryption: ref.read(encryptionServiceProvider));
+});
+
+final dataManagementServiceProvider = Provider<DataManagementService>((ref) {
+  return DataManagementService(
+    chatHistory: ref.read(chatHistoryServiceProvider),
+    resultCache: ref.read(resultCacheServiceProvider),
+    permissionAudit: ref.read(permissionAuditServiceProvider),
+    secureStorage: ref.read(secureStorageServiceProvider),
+  );
 });
 
 /// Provider for the GoRouter instance.
@@ -30,8 +72,8 @@ final routerProvider = Provider<GoRouter>((ref) {
 });
 
 /// Provider for permissions service.
-final permissionsServiceProvider = Provider<PermissionsService>((_) {
-  return PermissionsService();
+final permissionsServiceProvider = Provider<PermissionsService>((ref) {
+  return PermissionsService(auditService: ref.read(permissionAuditServiceProvider));
 });
 
 /// Provider for camera service.
@@ -112,6 +154,7 @@ final mlOrchestratorServiceProvider = ChangeNotifierProvider<MlOrchestratorServi
   final yoloService = ref.watch(yoloDetectionServiceProvider);
   final ttsService = ref.watch(ttsServiceProvider);
   final faceService = ref.watch(faceRecognitionServiceProvider);
+  final resultCache = ref.watch(resultCacheServiceProvider);
 
   return MlOrchestratorService(
     cnnService: cnnService,
@@ -119,6 +162,7 @@ final mlOrchestratorServiceProvider = ChangeNotifierProvider<MlOrchestratorServi
     yoloService: yoloService,
     ttsService: ttsService,
     faceService: faceService,
+    resultCache: resultCache,
   );
 });
 
@@ -220,32 +264,29 @@ final themeDataProvider = Provider<ThemeData>((ref) {
 /// Provider for Gemini AI service.
 final geminiAiServiceProvider = ChangeNotifierProvider<GeminiAiService>((ref) {
   final ttsService = ref.watch(ttsServiceProvider);
+  final privacy = ref.watch(privacyConfigServiceProvider);
+  final secureStorage = ref.read(secureStorageServiceProvider);
+
   final service = GeminiAiService();
-  
-  // Initialize with TTS service for voice output
+
   Future.microtask(() async {
+    if (!privacy.cloudAiEnabled) return;
+    final apiKey = await secureStorage.read(key: 'gemini_api_key');
+    if (apiKey == null || apiKey.isEmpty) return;
+
     try {
-      await service.initialize(
-        apiKey: '', // API key should come from secure storage
-        ttsService: ttsService,
-      );
-    } catch (e) {
-      // Initialization failed, service will use offline fallback
+      await service.initialize(apiKey: apiKey, ttsService: ttsService);
+    } catch (_) {
+      // Leave uninitialized: service will fall back to offline responses.
     }
   });
-  
+
   return service;
 });
 
 /// Provider for chat history service.
 final chatHistoryServiceProvider = ChangeNotifierProvider<ChatHistoryService>((ref) {
-  final service = ChatHistoryService();
-  
-  Future.microtask(() async {
-    await service.initialize();
-  });
-  
-  return service;
+  return ChatHistoryService(encryption: ref.read(encryptionServiceProvider));
 });
 
 /// Provider for current app mode (starts with Dashboard).

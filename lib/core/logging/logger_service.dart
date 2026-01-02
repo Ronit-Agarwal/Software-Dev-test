@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:signsync/core/error/global_error_handler.dart';
+import 'package:signsync/core/privacy/privacy_settings.dart';
 
 /// Service for structured logging throughout the app.
 ///
@@ -29,7 +31,12 @@ class LoggerService {
       level: kDebugMode ? Level.debug : Level.error,
     );
 
-    // Initialize Sentry for crash reporting
+    if (!PrivacySettings.crashReportingEnabled) {
+      _isInitialized = true;
+      LoggerService.info('Logger service initialized (crash reporting disabled)');
+      return;
+    }
+
     try {
       await SentryFlutter.init(
         (options) {
@@ -41,9 +48,8 @@ class LoggerService {
         },
       );
       _isInitialized = true;
-      LoggerService.info('Logger service initialized');
+      LoggerService.info('Logger service initialized (crash reporting enabled)');
     } catch (e) {
-      // Sentry initialization failed, continue without it
       _isInitialized = true;
       LoggerService.warn('Sentry initialization failed, continuing without crash reporting');
     }
@@ -160,8 +166,7 @@ class LoggerService {
         break;
     }
 
-    // Report errors to Sentry
-    if (level == Level.error || level == Level.wtf) {
+    if (PrivacySettings.crashReportingEnabled && (level == Level.error || level == Level.wtf)) {
       _reportToSentry(message, error: error, stackTrace: stackTrace);
     }
   }
@@ -221,7 +226,9 @@ class PerformanceTrace {
   final Stopwatch _stopwatch;
   final Map<String, dynamic> _metrics;
 
-  PerformanceTrace(this._operation) : _stopwatch = Stopwatch();
+  PerformanceTrace(this._operation)
+      : _stopwatch = Stopwatch(),
+        _metrics = {};
 
   /// Starts the trace.
   void start() {
