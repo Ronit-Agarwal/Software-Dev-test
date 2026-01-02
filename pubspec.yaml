@@ -42,6 +42,7 @@ dependencies:
   # Audio
   sound_stream: ^0.3.0
   flutter_sound: ^9.2.13
+  flutter_tts: ^3.8.5
 
   # Platform Services
   permission_handler: ^11.1.0
