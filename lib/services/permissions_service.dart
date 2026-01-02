@@ -1,18 +1,26 @@
+import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:signsync/core/error/exceptions.dart';
 import 'package:signsync/core/logging/logger_service.dart';
+import 'package:signsync/services/permission_audit_service.dart';
 
 /// Service for managing app permissions across platforms.
 ///
 /// This service handles requesting, checking, and managing runtime
 /// permissions for camera, microphone, and storage access.
 class PermissionsService {
+  final PermissionAuditService _auditService;
+
   PermissionStatus _cameraStatus = PermissionStatus.denied;
   PermissionStatus _microphoneStatus = PermissionStatus.denied;
   PermissionStatus _photoLibraryStatus = PermissionStatus.denied;
   PermissionStatus _notificationStatus = PermissionStatus.denied;
+
+  PermissionsService({PermissionAuditService? auditService})
+      : _auditService = auditService ?? PermissionAuditService();
 
   // Getters for permission statuses
   PermissionStatus get cameraStatus => _cameraStatus;
@@ -72,6 +80,13 @@ class PermissionsService {
       LoggerService.info('Requesting camera permission');
       final status = await Permission.camera.request();
       _cameraStatus = status;
+      unawaited(
+        _auditService.log(
+          permission: 'camera',
+          action: 'request',
+          status: status.name,
+        ),
+      );
 
       if (status.isGranted) {
         LoggerService.info('Camera permission granted');
@@ -101,6 +116,13 @@ class PermissionsService {
       LoggerService.info('Requesting microphone permission');
       final status = await Permission.microphone.request();
       _microphoneStatus = status;
+      unawaited(
+        _auditService.log(
+          permission: 'microphone',
+          action: 'request',
+          status: status.name,
+        ),
+      );
 
       if (status.isGranted) {
         LoggerService.info('Microphone permission granted');
@@ -174,6 +196,21 @@ class PermissionsService {
       Permission.camera,
       Permission.microphone,
     ].request();
+
+    unawaited(
+      _auditService.log(
+        permission: 'camera',
+        action: 'request_all',
+        status: results[Permission.camera]?.name ?? 'unknown',
+      ),
+    );
+    unawaited(
+      _auditService.log(
+        permission: 'microphone',
+        action: 'request_all',
+        status: results[Permission.microphone]?.name ?? 'unknown',
+      ),
+    );
 
     // Update cached statuses
     for (final entry in results.entries) {
