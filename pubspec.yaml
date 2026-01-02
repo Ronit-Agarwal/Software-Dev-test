@@ -72,6 +72,13 @@ dependencies:
   vibration: ^1.8.4
   noise_meter: ^4.0.1
 
+  # AI & Database
+  google_generative_ai: ^0.4.0
+  sqflite: ^2.3.0
+  path: ^1.8.3
+  crypto: ^3.0.3
+  encrypt: ^5.0.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

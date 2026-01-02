@@ -5,13 +5,24 @@ import 'package:signsync/models/app_mode.dart';
 import 'package:signsync/widgets/common/bottom_nav_bar.dart';
 import 'package:signsync/core/theme/colors.dart';
 import 'package:signsync/utils/constants.dart';
+import 'package:signsync/screens/translation/translation_screen.dart';
+import 'package:signsync/screens/detection/detection_screen.dart';
+import 'package:signsync/screens/sound/sound_screen.dart';
+import 'package:signsync/screens/chat/chat_screen.dart';
+import 'package:signsync/screens/dashboard/dashboard_screen.dart';
 
 /// Home screen with bottom navigation for mode switching.
 ///
 /// This is the main container screen that handles navigation between
-/// the different app modes (ASL Translation, Object Detection, Sound Alerts, AI Chat).
-class HomeScreen extends ConsumerWidget {
+/// the different app modes (Dashboard, ASL Translation, Object Detection, Sound Alerts, AI Chat).
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -39,6 +50,8 @@ class HomeScreen extends ConsumerWidget {
         return const SoundScreen();
       case AppMode.chat:
         return const ChatScreen();
+      case AppMode.dashboard:
+        return const DashboardScreen();
     }
   }
 }

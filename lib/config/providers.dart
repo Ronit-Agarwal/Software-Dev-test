@@ -15,6 +15,8 @@ import 'package:signsync/services/ml_orchestrator_service.dart';
 import 'package:signsync/services/tts_service.dart';
 import 'package:signsync/services/asl_translation_service.dart';
 import 'package:signsync/services/audio_service.dart';
+import 'package:signsync/services/gemini_ai_service.dart';
+import 'package:signsync/services/chat_history_service.dart';
 
 /// Root provider for the application configuration.
 final appConfigProvider = ChangeNotifierProvider<AppConfig>((ref) {
@@ -160,11 +162,6 @@ final mlPerformanceProvider = Provider<Map<String, dynamic>>((ref) {
   return orchestrator.performanceMetrics;
 });
 
-/// Provider for the current app mode.
-final appModeProvider = StateProvider<AppMode>((_) {
-  return AppMode.translation;
-});
-
 /// Provider for the latest inference result.
 final inferenceResultProvider = Provider<InferenceResult?>((ref) {
   final mlService = ref.watch(mlInferenceServiceProvider);
@@ -208,4 +205,40 @@ final themeDataProvider = Provider<ThemeData>((ref) {
     case ThemeMode.system:
       return AppTheme.lightTheme;
   }
+});
+
+/// Provider for Gemini AI service.
+final geminiAiServiceProvider = ChangeNotifierProvider<GeminiAiService>((ref) {
+  final ttsService = ref.watch(ttsServiceProvider);
+  final service = GeminiAiService();
+  
+  // Initialize with TTS service for voice output
+  Future.microtask(() async {
+    try {
+      await service.initialize(
+        apiKey: '', // API key should come from secure storage
+        ttsService: ttsService,
+      );
+    } catch (e) {
+      // Initialization failed, service will use offline fallback
+    }
+  });
+  
+  return service;
+});
+
+/// Provider for chat history service.
+final chatHistoryServiceProvider = ChangeNotifierProvider<ChatHistoryService>((ref) {
+  final service = ChatHistoryService();
+  
+  Future.microtask(() async {
+    await service.initialize();
+  });
+  
+  return service;
+});
+
+/// Provider for current app mode (starts with Dashboard).
+final appModeProvider = StateProvider<AppMode>((_) {
+  return AppMode.dashboard;
 });
