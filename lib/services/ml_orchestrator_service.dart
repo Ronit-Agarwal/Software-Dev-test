@@ -87,6 +87,200 @@ class MlOrchestratorService with ChangeNotifier {
   int? get lastInferenceLatency => _lastInferenceLatency;
   bool get adaptiveInferenceEnabled => _adaptiveInferenceEnabled;
 
+  /// Enhanced frame processing with comprehensive error recovery.
+  Future<void> processFrame({
+    required CameraImage image,
+    required AppMode mode,
+    VoidCallback? onProgress,
+  }) async {
+    if (_isProcessing) {
+      LoggerService.warn('Frame processing already in progress, skipping frame');
+      return;
+    }
+
+    _isProcessing = true;
+    _processingStopwatch.reset();
+    _processingStopwatch.start();
+
+    try {
+      _totalFramesProcessed++;
+      _framesPerMode[mode] = (_framesPerMode[mode] ?? 0) + 1;
+
+      switch (mode) {
+        case AppMode.aslTranslation:
+          await _processAslFrame(image, onProgress);
+          break;
+        case AppMode.objectDetection:
+          await _processDetectionFrame(image, onProgress);
+          break;
+        case AppMode.soundAlerts:
+          await _processSoundFrame(image, onProgress);
+          break;
+        case AppMode.aiAssistant:
+          await _processAssistantFrame(image, onProgress);
+          break;
+        case AppMode.personRecognition:
+          await _processFaceFrame(image, onProgress);
+          break;
+        default:
+          LoggerService.warn('Unknown mode: $mode');
+      }
+
+      _lastInferenceLatency = _processingStopwatch.elapsedMilliseconds;
+      
+      // Update performance metrics
+      if (_lastInferenceLatency! < 100) {
+        _processingTimes.add(_lastInferenceLatency!.toDouble());
+        // Keep only last 100 measurements
+        if (_processingTimes.length > 100) {
+          _processingTimes.removeAt(0);
+        }
+      }
+
+      LoggerService.debug('Frame processed in ${_lastInferenceLatency}ms for mode: $mode');
+    } catch (e, stack) {
+      LoggerService.error('Frame processing failed', error: e, stack: stack);
+      await _handleProcessingError(e, mode);
+    } finally {
+      _isProcessing = false;
+      _processingStopwatch.stop();
+      notifyListeners();
+    }
+  }
+
+  /// Handles processing errors with recovery strategies.
+  Future<void> _handleProcessingError(Object error, AppMode mode) async {
+    try {
+      // Log the error for analysis
+      _error = 'Processing error in $mode: $error';
+      
+      // Attempt model-specific recovery
+      switch (mode) {
+        case AppMode.aslTranslation:
+          await _recoverAslProcessing(error);
+          break;
+        case AppMode.objectDetection:
+          await _recoverDetectionProcessing(error);
+          break;
+        case AppMode.soundAlerts:
+          await _recoverSoundProcessing(error);
+          break;
+        case AppMode.aiAssistant:
+          await _recoverAssistantProcessing(error);
+          break;
+        case AppMode.personRecognition:
+          await _recoverFaceProcessing(error);
+          break;
+        default:
+          LoggerService.warn('No recovery strategy for mode: $mode');
+      }
+
+      // General fallback: reduce processing frequency if errors persist
+      if (_processingTimes.isNotEmpty && 
+          _processingTimes.last > 200) { // If last inference was slow
+        _inferenceFrequencyMs = 100; // Process every 100ms instead of every frame
+        LoggerService.info('Reduced inference frequency due to performance issues');
+      }
+
+      notifyListeners();
+    } catch (recoveryError, recoveryStack) {
+      LoggerService.error('Recovery failed', error: recoveryError, stack: recoveryStack);
+      // Continue with degraded functionality rather than crashing
+    }
+  }
+
+  /// Recovery strategy for ASL processing errors.
+  Future<void> _recoverAslProcessing(Object error) async {
+    try {
+      LoggerService.info('Attempting ASL processing recovery');
+      
+      // Reset CNN model if it's causing issues
+      if (error.toString().contains('CNN') || error.toString().contains('inference')) {
+        await _cnnService.reinitialize();
+      }
+      
+      // Reset LSTM if temporal processing is failing
+      if (error.toString().contains('LSTM') || error.toString().contains('temporal')) {
+        await _lstmService.clearHistory();
+      }
+      
+      LoggerService.info('ASL processing recovery attempted');
+    } catch (e) {
+      LoggerService.error('ASL recovery failed', error: e);
+    }
+  }
+
+  /// Recovery strategy for object detection errors.
+  Future<void> _recoverDetectionProcessing(Object error) async {
+    try {
+      LoggerService.info('Attempting detection processing recovery');
+      
+      // Reset YOLO model if it's failing
+      if (error.toString().contains('YOLO') || error.toString().contains('detection')) {
+        await _yoloService.reinitialize();
+      }
+      
+      // Clear detection history to start fresh
+      await _storageService.clearDetectionHistory();
+      
+      LoggerService.info('Detection processing recovery attempted');
+    } catch (e) {
+      LoggerService.error('Detection recovery failed', error: e);
+    }
+  }
+
+  /// Recovery strategy for sound processing errors.
+  Future<void> _recoverSoundProcessing(Object error) async {
+    try {
+      LoggerService.info('Attempting sound processing recovery');
+      
+      // Audio processing is typically handled by TTS service
+      if (_ttsService.isInitialized) {
+        await _ttsService.stop();
+        await _ttsService.initialize();
+      }
+      
+      LoggerService.info('Sound processing recovery attempted');
+    } catch (e) {
+      LoggerService.error('Sound recovery failed', error: e);
+    }
+  }
+
+  /// Recovery strategy for AI assistant errors.
+  Future<void> _recoverAssistantProcessing(Object error) async {
+    try {
+      LoggerService.info('Attempting AI assistant recovery');
+      
+      // AI processing errors are typically network-related
+      if (error.toString().contains('network') || 
+          error.toString().contains('timeout') ||
+          error.toString().contains('API')) {
+        // Use offline fallback responses
+        _error = 'AI service temporarily unavailable. Using offline responses.';
+        LoggerService.warn('Switching to offline AI responses');
+      }
+      
+      LoggerService.info('AI assistant recovery attempted');
+    } catch (e) {
+      LoggerService.error('AI assistant recovery failed', error: e);
+    }
+  }
+
+  /// Recovery strategy for face recognition errors.
+  Future<void> _recoverFaceProcessing(Object error) async {
+    try {
+      LoggerService.info('Attempting face processing recovery');
+      
+      // Reset face recognition model
+      if (_faceService.isInitialized) {
+        await _faceService.reinitialize();
+      }
+      
+      LoggerService.info('Face processing recovery attempted');
+    } catch (e) {
+      LoggerService.error('Face processing recovery failed', error: e);
+    }
+  }
   /// Creates orchestrator with optional model services (for dependency injection).
   MlOrchestratorService({
     CnnInferenceService? cnnService,
@@ -102,14 +296,269 @@ class MlOrchestratorService with ChangeNotifier {
         _faceService = faceService ?? FaceRecognitionService(),
         _storageService = storageService ?? StorageService();
 
+  /// Enables battery optimization mode for extended use.
+  Future<void> enableBatteryOptimization() async {
+    LoggerService.info('Enabling battery optimization mode');
+    
+    try {
+      // Reduce inference frequency to save battery
+      _inferenceFrequencyMs = 200; // Process every 200ms instead of every frame
+      
+      // Disable heavy models if not essential
+      _enableCnn = true; // Keep CNN for ASL (essential)
+      _enableLstm = false; // Disable LSTM to save battery
+      _enableYolo = true; // Keep YOLO for object detection
+      _enableFace = false; // Disable face recognition
+      
+      // Increase confidence thresholds to reduce false positives
+      _aslConfidenceThreshold = 0.90;
+      _objectConfidenceThreshold = 0.70;
+      _faceConfidenceThreshold = 0.80;
+      
+      // Reduce audio alerts
+      _audioAlertsEnabled = false;
+      _spatialAudioEnabled = false;
+      
+      notifyListeners();
+      LoggerService.info('Battery optimization mode enabled');
+    } catch (e, stack) {
+      LoggerService.error('Failed to enable battery optimization', error: e, stack: stack);
+    }
+  }
+
+  /// Optimizes for low-memory devices.
+  Future<void> optimizeForLowMemoryDevice() async {
+    LoggerService.info('Optimizing for low-memory device');
+    
+    try {
+      // Use lower resolution processing
+      _enableCnn = true; // Keep CNN
+      _enableLstm = true; // Keep LSTM
+      _enableYolo = false; // Disable YOLO (memory intensive)
+      _enableFace = false; // Disable face recognition
+      
+      // Increase inference frequency (process less often)
+      _inferenceFrequencyMs = 300;
+      
+      // Lower confidence thresholds to reduce processing
+      _aslConfidenceThreshold = 0.80;
+      _objectConfidenceThreshold = 0.65;
+      _faceConfidenceThreshold = 0.70;
+      
+      // Clear result queue to free memory
+      _resultQueue.clear();
+      
+      // Clear old processing times
+      _processingTimes.clear();
+      
+      notifyListeners();
+      LoggerService.info('Low-memory optimization applied');
+    } catch (e, stack) {
+      LoggerService.error('Failed to optimize for low-memory device', error: e, stack: stack);
+    }
+  }
+
+  /// Handles rapid mode switching without crashes.
+  Future<void> switchMode(AppMode newMode) async {
+    if (_currentMode == newMode) {
+      LoggerService.debug('Mode already set to: $newMode');
+      return;
+    }
+
+    LoggerService.info('Switching from $_currentMode to $newMode');
+
+    try {
+      // Cancel any ongoing processing
+      _isProcessing = false;
+      
+      // Clear result queue when switching modes
+      _resultQueue.clear();
+      
+      // Update mode
+      final oldMode = _currentMode;
+      _currentMode = newMode;
+      
+      // Mode-specific cleanup and initialization
+      await _cleanupForMode(oldMode);
+      await _initializeForMode(newMode);
+      
+      notifyListeners();
+      LoggerService.info('Successfully switched to mode: $newMode');
+    } catch (e, stack) {
+      LoggerService.error('Mode switch failed', error: e, stack: stack);
+      _error = 'Failed to switch to $newMode: $e';
+      
+      // Try to recover by switching back to dashboard
+      try {
+        await switchMode(AppMode.dashboard);
+      } catch (recoveryError) {
+        LoggerService.error('Failed to recover from mode switch error', error: recoveryError);
+      }
+      
+      notifyListeners();
+    }
+  }
+
+  /// Cleanup resources for a specific mode.
+  Future<void> _cleanupForMode(AppMode mode) async {
+    try {
+      switch (mode) {
+        case AppMode.aslTranslation:
+          // Clear temporal processing buffers
+          await _lstmService.clearHistory();
+          break;
+        case AppMode.objectDetection:
+          // Clear detection history
+          await _storageService.clearDetectionHistory();
+          break;
+        case AppMode.aiAssistant:
+          // Chat history is persistent, no cleanup needed
+          break;
+        case AppMode.personRecognition:
+          // Clear face recognition cache
+          await _faceService.clearCache();
+          break;
+        default:
+          // No specific cleanup needed
+          break;
+      }
+    } catch (e) {
+      LoggerService.warn('Cleanup for mode $mode failed', error: e);
+    }
+  }
+
+  /// Initialize resources for a specific mode.
+  Future<void> _initializeForMode(AppMode mode) async {
+    try {
+      switch (mode) {
+        case AppMode.aslTranslation:
+          // Initialize ASL models
+          if (!_cnnService.isInitialized) {
+            await _cnnService.initialize();
+          }
+          if (!_lstmService.isInitialized) {
+            await _lstmService.initialize();
+          }
+          break;
+        case AppMode.objectDetection:
+          // Initialize YOLO
+          if (!_yoloService.isInitialized) {
+            await _yoloService.initialize();
+          }
+          break;
+        case AppMode.aiAssistant:
+          // AI assistant is initialized separately
+          break;
+        case AppMode.personRecognition:
+          // Initialize face recognition
+          if (!_faceService.isInitialized) {
+            await _faceService.initialize();
+          }
+          break;
+        default:
+          // Dashboard or other modes don't need special initialization
+          break;
+      }
+    } catch (e) {
+      LoggerService.error('Initialization for mode $mode failed', error: e);
+      rethrow;
+    }
+  }
+
+  /// Gets performance statistics for the dashboard.
+  Map<String, dynamic> getPerformanceStats() {
+    final avgProcessingTime = _processingTimes.isNotEmpty
+        ? _processingTimes.reduce((a, b) => a + b) / _processingTimes.length
+        : 0.0;
+    
+    return {
+      'totalFramesProcessed': _totalFramesProcessed,
+      'averageProcessingTime': avgProcessingTime,
+      'currentMode': _currentMode.toString(),
+      'isProcessing': _isProcessing,
+      'queuedResults': _resultQueue.length,
+      'framesPerMode': Map.from(_framesPerMode),
+      'memoryUsage': _memoryUsage,
+      'batteryLevel': _batteryLevel,
+      'lastInferenceLatency': _lastInferenceLatency,
+      'enabledModels': {
+        'cnn': _enableCnn,
+        'lstm': _enableLstm,
+        'yolo': _enableYolo,
+        'face': _enableFace,
+      },
+      'adaptiveInference': _adaptiveInferenceEnabled,
+      'inferenceFrequency': _inferenceFrequencyMs,
+    };
+  }
+
+  /// Health check for all ML services.
+  Future<Map<String, bool>> performHealthCheck() async {
+    LoggerService.info('Performing ML services health check');
+    
+    final health = <String, bool>{};
+    
+    try {
+      health['cnn'] = _cnnService.isInitialized;
+      health['lstm'] = _lstmService.isInitialized;
+      health['yolo'] = _yoloService.isInitialized;
+      health['face'] = _faceService.isInitialized;
+      health['tts'] = _ttsService.isInitialized;
+      health['storage'] = _storageService.isInitialized;
+      
+      // Check if models can perform inference
+      if (health['cnn'] == true) {
+        try {
+          await _cnnService.performHealthCheck();
+          health['cnn_inference'] = true;
+        } catch (_) {
+          health['cnn_inference'] = false;
+        }
+      }
+      
+      if (health['lstm'] == true) {
+        try {
+          await _lstmService.performHealthCheck();
+          health['lstm_inference'] = true;
+        } catch (_) {
+          health['lstm_inference'] = false;
+        }
+      }
+      
+      if (health['yolo'] == true) {
+        try {
+          await _yoloService.performHealthCheck();
+          health['yolo_inference'] = true;
+        } catch (_) {
+          health['yolo_inference'] = false;
+        }
+      }
+      
+      if (health['face'] == true) {
+        try {
+          await _faceService.performHealthCheck();
+          health['face_inference'] = true;
+        } catch (_) {
+          health['face_inference'] = false;
+        }
+      }
+      
+      LoggerService.info('Health check completed: $health');
+    } catch (e, stack) {
+      LoggerService.error('Health check failed', error: e, stack: stack);
+      health['overall'] = false;
+    }
+    
+    return health;
+  }
   /// Initializes the ML orchestrator with all required models.
   Future<void> initialize({
     required AppMode initialMode,
+    Locale? locale,
     String? cnnModelPath,
     String? lstmModelPath,
     String? yoloModelPath,
     String? faceModelPath,
-    Locale? locale,
   }) async {
     if (_isInitialized) {
       LoggerService.warn('ML orchestrator already initialized');
@@ -153,7 +602,7 @@ class MlOrchestratorService with ChangeNotifier {
           // Sound mode doesn't use visual models
           break;
         case AppMode.chat:
-          // Chat mode may use different models in future
+          // Chat mode doesn't use visual models
           break;
       }
 

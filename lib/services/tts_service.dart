@@ -85,7 +85,7 @@ class TtsService with ChangeNotifier {
       ? _speechDurations.reduce((a, b) => a + b) / _speechDurations.length
       : 0.0;
 
-  /// Initializes the TTS service.
+  /// Enhanced TTS initialization with comprehensive platform detection and fallbacks.
   Future<void> initialize() async {
     if (_isInitialized) {
       LoggerService.warn('TTS service already initialized');
@@ -97,6 +97,345 @@ class TtsService with ChangeNotifier {
       _error = null;
 
       _flutterTts = FlutterTts();
+
+      // Set up TTS event handlers
+      _setupTtsEventHandlers();
+
+      // Wait for TTS engine initialization
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Check TTS availability
+      final isAvailable = await _flutterTts!.isLanguageAvailable('en-US');
+      if (!isAvailable) {
+        // Try alternative language
+        final isAlternativeAvailable = await _flutterTts!.isLanguageAvailable('en-GB');
+        if (!isAlternativeAvailable) {
+          throw TtsException('tts_unavailable', 'Text-to-speech engine not available on this device');
+        }
+        _currentLanguage = 'en-GB';
+      } else {
+        _currentLanguage = 'en-US';
+      }
+
+      // Set language
+      await _flutterTts!.setLanguage(_currentLanguage!);
+
+      // Configure audio settings
+      await _flutterTts!.setVolume(_volume);
+      await _flutterTts!.setSpeechRate(_speechRate);
+      await _flutterTts!.setPitch(_pitch);
+
+      // Start queue processing
+      _startQueueProcessing();
+
+      _isInitialized = true;
+      notifyListeners();
+
+      LoggerService.info('TTS service initialized successfully');
+    } catch (e, stack) {
+      _error = 'TTS initialization failed: $e';
+      LoggerService.error('TTS service initialization failed', error: e, stack: stack);
+      _isInitialized = false;
+      notifyListeners();
+      
+      // Don't throw - allow app to function without TTS
+      LoggerService.warn('Continuing without TTS support');
+    }
+  }
+
+  /// Enhanced speak method with comprehensive error handling and fallbacks.
+  Future<void> speak(
+    String text, {
+    AlertPriority priority = AlertPriority.low,
+    bool spatialAudio = true,
+    String? objectLabel,
+    double? objectPosition,
+  }) async {
+    if (!_isInitialized || _flutterTts == null) {
+      LoggerService.warn('TTS not initialized, cannot speak: $text');
+      return;
+    }
+
+    if (text.trim().isEmpty) {
+      LoggerService.warn('Empty text provided to TTS');
+      return;
+    }
+
+    // Check for duplicate alerts
+    final alertKey = '${objectLabel ?? 'text'}_${text.hashCode}';
+    final now = DateTime.now();
+    final lastSpoken = _lastSpokenCache[alertKey];
+    
+    if (lastSpoken != null && 
+        now.difference(lastSpoken) < _duplicateCooldown) {
+      _duplicateAlertsFiltered++;
+      LoggerService.debug('Duplicate alert filtered: $text');
+      return;
+    }
+
+    // Add to queue for processing
+    final alert = AudioAlert(
+      id: 'alert_${now.millisecondsSinceEpoch}',
+      text: text.trim(),
+      priority: priority,
+      spatialAudio: spatialAudio,
+      objectLabel: objectLabel,
+      objectPosition: objectPosition,
+      timestamp: now,
+    );
+
+    _alertQueue.add(alert);
+    _lastSpokenCache[alertKey] = now;
+
+    // Clean up old cache entries
+    _cleanupCache();
+
+    // Process queue if not already processing
+    if (!_isSpeaking) {
+      _processQueue();
+    }
+
+    notifyListeners();
+  }
+
+  /// Enhanced queue processing with priority handling.
+  Future<void> _processQueue() async {
+    if (_isSpeaking || _alertQueue.isEmpty) {
+      return;
+    }
+
+    _isSpeaking = true;
+    notifyListeners();
+
+    try {
+      while (_alertQueue.isNotEmpty) {
+        // Get highest priority alert
+        final alert = _alertQueue.removeFirst();
+        
+        // Apply spatial audio if enabled
+        final processedText = _spatialAudioEnabled && alert.spatialAudio
+            ? _applySpatialAudio(alert.text, alert.objectPosition)
+            : alert.text;
+
+        LoggerService.debug('Speaking alert: ${alert.text}');
+
+        // Speak the alert
+        final stopwatch = Stopwatch()..start();
+        await _flutterTts!.speak(processedText);
+        
+        // Wait for speech to complete or timeout
+        final maxDuration = Duration(milliseconds: (alert.text.length * 50).clamp(1000, 5000));
+        await Future.delayed(maxDuration);
+        
+        stopwatch.stop();
+        _speechDurations.add(stopwatch.elapsedMilliseconds.toDouble());
+        
+        // Keep only last 50 measurements
+        if (_speechDurations.length > 50) {
+          _speechDurations.removeAt(0);
+        }
+
+        _totalAlertsPlayed++;
+
+        // Small delay between alerts to prevent overlapping
+        await Future.delayed(const Duration(milliseconds: 200));
+      }
+    } catch (e, stack) {
+      LoggerService.error('TTS queue processing failed', error: e, stack: stack);
+      _error = 'TTS playback failed: $e';
+    } finally {
+      _isSpeaking = false;
+      notifyListeners();
+    }
+  }
+
+  /// Enhanced spatial audio application with better positioning.
+  String _applySpatialAudio(String text, double? position) {
+    if (!_spatialAudioEnabled || position == null) {
+      return text;
+    }
+
+    // Determine position
+    String positionText;
+    if (position < _leftZoneThreshold) {
+      positionText = 'on your left';
+    } else if (position > _rightZoneThreshold) {
+      positionText = 'on your right';
+    } else {
+      positionText = 'ahead';
+    }
+
+    return '$positionText, $text';
+  }
+
+  /// Set up TTS event handlers with error recovery.
+  void _setupTtsEventHandlers() {
+    _flutterTts!.setStartHandler(() {
+      LoggerService.debug('TTS speech started');
+      _isSpeaking = true;
+      notifyListeners();
+    });
+
+    _flutterTts!.setCompletionHandler(() {
+      LoggerService.debug('TTS speech completed');
+      _isSpeaking = false;
+      notifyListeners();
+      
+      // Continue processing queue
+      _processQueue();
+    });
+
+    _flutterTts!.setErrorHandler((message) {
+      LoggerService.error('TTS error: $message');
+      _isSpeaking = false;
+      _error = 'TTS error: $message';
+      notifyListeners();
+    });
+
+    _flutterTts!.setCancelHandler(() {
+      LoggerService.debug('TTS speech cancelled');
+      _isSpeaking = false;
+      notifyListeners();
+    });
+  }
+
+  /// Enhanced stop method with immediate queue clearing.
+  Future<void> stop() async {
+    try {
+      LoggerService.info('Stopping TTS service');
+      
+      // Stop current speech
+      await _flutterTts?.stop();
+      
+      // Clear queue
+      _alertQueue.clear();
+      
+      _isSpeaking = false;
+      notifyListeners();
+      
+      LoggerService.info('TTS service stopped');
+    } catch (e, stack) {
+      LoggerService.error('Failed to stop TTS service', error: e, stack: stack);
+      _error = 'Failed to stop TTS: $e';
+      notifyListeners();
+    }
+  }
+
+  /// Enhanced volume control with validation.
+  Future<void> setVolume(double volume) async {
+    final clampedVolume = volume.clamp(0.0, 1.0);
+    
+    try {
+      _volume = clampedVolume;
+      if (_flutterTts != null && _isInitialized) {
+        await _flutterTts!.setVolume(_volume);
+      }
+      LoggerService.debug('TTS volume set to: $_volume');
+      notifyListeners();
+    } catch (e, stack) {
+      LoggerService.error('Failed to set TTS volume', error: e, stack: stack);
+    }
+  }
+
+  /// Enhanced speech rate control with validation.
+  Future<void> setSpeechRate(double rate) async {
+    final clampedRate = rate.clamp(0.1, 2.0);
+    
+    try {
+      _speechRate = clampedRate;
+      if (_flutterTts != null && _isInitialized) {
+        await _flutterTts!.setSpeechRate(_speechRate);
+      }
+      LoggerService.debug('TTS speech rate set to: $_speechRate');
+      notifyListeners();
+    } catch (e, stack) {
+      LoggerService.error('Failed to set TTS speech rate', error: e, stack: stack);
+    }
+  }
+
+  /// Enhanced pitch control with validation.
+  Future<void> setPitch(double pitch) async {
+    final clampedPitch = pitch.clamp(0.5, 2.0);
+    
+    try {
+      _pitch = clampedPitch;
+      if (_flutterTts != null && _isInitialized) {
+        await _flutterTts!.setPitch(_pitch);
+      }
+      LoggerService.debug('TTS pitch set to: $_pitch');
+      notifyListeners();
+    } catch (e, stack) {
+      LoggerService.error('Failed to set TTS pitch', error: e, stack: stack);
+    }
+  }
+
+  /// Clean up old cache entries to prevent memory leaks.
+  void _cleanupCache() {
+    final now = DateTime.now();
+    _lastSpokenCache.removeWhere((key, timestamp) => 
+        now.difference(timestamp) > const Duration(minutes: 10));
+  }
+
+  /// Start queue processing timer.
+  void _startQueueProcessing() {
+    _queueProcessingTimer?.cancel();
+    _queueProcessingTimer = Timer.periodic(
+      const Duration(milliseconds: 100),
+      (timer) {
+        if (!_isSpeaking && _alertQueue.isNotEmpty) {
+          _processQueue();
+        }
+      },
+    );
+  }
+
+  /// Get performance statistics for monitoring.
+  Map<String, dynamic> getPerformanceStats() {
+    return {
+      'isInitialized': _isInitialized,
+      'isSpeaking': _isSpeaking,
+      'queuedAlerts': _alertQueue.length,
+      'totalAlertsPlayed': _totalAlertsPlayed,
+      'duplicateAlertsFiltered': _duplicateAlertsFiltered,
+      'averageSpeechDuration': averageSpeechDuration,
+      'volume': _volume,
+      'speechRate': _speechRate,
+      'pitch': _pitch,
+      'spatialAudioEnabled': _spatialAudioEnabled,
+      'currentLanguage': _currentLanguage,
+    };
+  }
+
+  /// Health check for TTS service.
+  Future<bool> performHealthCheck() async {
+    try {
+      if (!_isInitialized || _flutterTts == null) {
+        return false;
+      }
+
+      // Test basic functionality
+      await _flutterTts!.isLanguageAvailable('en-US');
+      return true;
+    } catch (e) {
+      LoggerService.error('TTS health check failed', error: e);
+      return false;
+    }
+  }
+
+  /// Cleanup resources.
+  Future<void> dispose() async {
+    LoggerService.info('Disposing TTS service');
+    
+    _queueProcessingTimer?.cancel();
+    await stop();
+    _flutterTts = null;
+    _isInitialized = false;
+    _alertQueue.clear();
+    _lastSpokenCache.clear();
+    
+    notifyListeners();
+  }
+}
 
       // Set default language
       await _flutterTts!.setLanguage('en-US');
