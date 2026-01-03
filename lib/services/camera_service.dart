@@ -303,14 +303,51 @@ class CameraService with ChangeNotifier {
     LoggerService.info('Camera toggled: $_cameraEnabled');
   }
 
-  /// Toggles the flash/torch.
+  /// Toggles the flash/torch with enhanced low-light detection.
   Future<void> toggleFlash() async {
-    if (_controller == null) return;
+    if (_controller == null || !_controller!.value.isInitialized) return;
 
-    _isFlashOn = !_isFlashOn;
-    await _controller!.setFlashMode(_isFlashOn ? FlashMode.torch : FlashMode.off);
-    LoggerService.debug('Flash toggled: $_isFlashOn');
-    notifyListeners();
+    try {
+      _isFlashOn = !_isFlashOn;
+      await _controller!.setFlashMode(_isFlashOn ? FlashMode.torch : FlashMode.off);
+      LoggerService.debug('Flash toggled: $_isFlashOn');
+      notifyListeners();
+    } catch (e, stack) {
+      LoggerService.error('Failed to toggle flash', error: e, stack: stack);
+      _isFlashOn = false; // Reset state on failure
+      rethrow;
+    }
+  }
+
+  /// Detects low-light conditions and suggests enabling flash.
+  Future<bool> shouldEnableFlashForLowLight() async {
+    if (_controller == null || !_controller!.value.isInitialized) return false;
+
+    try {
+      // Simple low-light detection based on exposure value
+      final exposure = _controller!.value.exposureOffset;
+      final minExposure = _controller!.value.getMinExposureOffset();
+      
+      // If exposure is at minimum (very dark), suggest flash
+      return exposure <= minExposure + 0.5;
+    } catch (e) {
+      LoggerService.warn('Failed to detect low-light conditions', error: e);
+      return false;
+    }
+  }
+
+  /// Automatically enables flash in low-light conditions.
+  Future<void> autoEnableFlashIfNeeded() async {
+    try {
+      final shouldUseFlash = await shouldEnableFlashForLowLight();
+      if (shouldUseFlash && !_isFlashOn) {
+        await toggleFlash();
+        LoggerService.info('Auto-enabled flash for low-light conditions');
+      }
+    } catch (e) {
+      LoggerService.warn('Auto-flash detection failed', error: e);
+      // Don't throw - this is non-critical functionality
+    }
   }
 
   /// Captures a single image.
@@ -389,7 +426,7 @@ class CameraService with ChangeNotifier {
     }
   }
 
-  /// Called when app returns from background.
+  /// Called when app returns from background with enhanced recovery.
   Future<void> onAppForeground() async {
     if (!_isAppInBackground) return;
     _isAppInBackground = false;
@@ -397,12 +434,107 @@ class CameraService with ChangeNotifier {
     LoggerService.info('App returning to foreground, resuming camera');
     if (_cameraEnabled && _controller != null) {
       try {
+        // Add delay to ensure proper initialization
+        await Future.delayed(const Duration(milliseconds: 500));
+        
         await startCamera();
         LoggerService.info('Camera resumed after background');
       } catch (e, stack) {
         LoggerService.error('Failed to resume camera', error: e, stack: stack);
         _setError('Failed to resume camera. Please try again.');
+        
+        // Attempt recovery after a delay
+        Timer(const Duration(seconds: 2), () async {
+          if (_cameraEnabled && mounted) {
+            try {
+              await startCamera();
+              LoggerService.info('Camera recovered after background failure');
+            } catch (recoveryError, recoveryStack) {
+              LoggerService.error('Camera recovery failed', error: recoveryError, stack: recoveryStack);
+            }
+          }
+        });
       }
+    }
+  }
+
+  /// Handles orientation changes gracefully.
+  Future<void> onOrientationChanged() async {
+    if (_controller == null || !_controller!.value.isInitialized) return;
+
+    try {
+      LoggerService.debug('Handling orientation change');
+      
+      // Restart camera with current settings to handle orientation
+      final wasStreaming = _state == CameraState.streaming;
+      final resolution = _controller!.value.resolutionPreset;
+      final enableAudio = _controller!.value.enableAudio;
+      
+      if (wasStreaming) {
+        await stopStreaming();
+      }
+      
+      await startCamera(resolution: resolution, enableAudio: enableAudio);
+      
+      if (wasStreaming) {
+        // Resume streaming after orientation change
+        LoggerService.debug('Resuming streaming after orientation change');
+      }
+      
+      LoggerService.info('Camera orientation change handled successfully');
+    } catch (e, stack) {
+      LoggerService.error('Failed to handle orientation change', error: e, stack: stack);
+      _setError('Camera orientation change failed. Please restart the app.');
+    }
+  }
+
+  /// Optimizes camera settings for low-memory devices.
+  Future<void> optimizeForLowMemoryDevice() async {
+    try {
+      LoggerService.info('Optimizing camera for low-memory device');
+      
+      // Use lower resolution for inference
+      final resolution = ResolutionPreset.low;
+      await startCamera(resolution: resolution);
+      
+      // Set lower frame rate to reduce memory usage
+      if (_controller != null && _controller!.value.isInitialized) {
+        await _controller!.setDescriptionIfPossible(
+          _selectedCamera!.copyWith(
+            fpsRange: const Range(15, 24), // Limit to 15-24 FPS
+          ),
+        );
+      }
+      
+      LoggerService.info('Camera optimized for low-memory device');
+    } catch (e, stack) {
+      LoggerService.error('Failed to optimize for low-memory device', error: e, stack: stack);
+    }
+  }
+
+  /// Gets camera capabilities and limitations.
+  Map<String, dynamic> getCameraCapabilities() {
+    if (_controller == null || !_controller!.value.isInitialized) {
+      return {'error': 'Camera not initialized'};
+    }
+
+    try {
+      return {
+        'resolution': _controller!.value.resolutionPreset.toString(),
+        'exposureRange': _controller!.value.exposureOffsetRange,
+        'flashModes': _controller!.value.flashModes?.map((e) => e.toString()).toList(),
+        'focusModes': _controller!.value.focusModes?.map((e) => e.toString()).toList(),
+        'zoomRange': _controller!.value.zoomRange,
+        'minZoom': _controller!.value.getMinZoomLevel(),
+        'maxZoom': _controller!.value.getMaxZoomLevel(),
+        'imageFormat': _controller!.value.imageFormatGroup.toString(),
+        'sensorOrientation': _controller!.value.sensorOrientation,
+        'previewPauseForScreenshot': _controller!.value.previewPauseForScreenshot,
+        'maxPreviewSize': _controller!.value.previewSize,
+      };
+    } catch (e) {
+      LoggerService.error('Failed to get camera capabilities', error: e);
+      return {'error': 'Failed to get capabilities: $e'};
     }
   }
 

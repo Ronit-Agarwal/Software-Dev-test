@@ -19,6 +19,86 @@ abstract class SignSyncException implements Exception {
   String toString() => 'SignSyncException [$code]: $message';
 }
 
+/// Exception thrown when TTS operations fail.
+class TtsException extends SignSyncException {
+  const TtsException(
+    String message, {
+    String? code,
+    dynamic originalError,
+    StackTrace? stackTrace,
+  }) : super(
+          message,
+          code: code ?? 'TTS_ERROR',
+          originalError: originalError,
+          stackTrace: stackTrace,
+        );
+}
+
+/// Exception thrown when ML orchestrator operations fail.
+class MlOrchestratorException extends SignSyncException {
+  const MlOrchestratorException(
+    String message, {
+    String? code,
+    dynamic originalError,
+    StackTrace? stackTrace,
+  }) : super(
+          message,
+          code: code ?? 'ML_ORCHESTRATOR_ERROR',
+          originalError: originalError,
+          stackTrace: stackTrace,
+        );
+}
+
+/// Exception thrown when Gemini AI operations fail.
+class GeminiAiException extends SignSyncException {
+  const GeminiAiException(
+    String message, {
+    String? code,
+    dynamic originalError,
+    StackTrace? stackTrace,
+  }) : super(
+          message,
+          code: code ?? 'GEMINI_AI_ERROR',
+          originalError: originalError,
+          stackTrace: stackTrace,
+        );
+}
+
+/// Exception thrown when storage operations fail.
+class StorageException extends SignSyncException {
+  const StorageException(
+    String message, {
+    String? code,
+    dynamic originalError,
+    StackTrace? stackTrace,
+  }) : super(
+          message,
+          code: code ?? 'STORAGE_ERROR',
+          originalError: originalError,
+          stackTrace: stackTrace,
+        );
+}
+
+/// Exception thrown when ML operations fail.
+class MLException extends SignSyncException {
+  final String operation;
+  final String? modelName;
+
+  const MLException({
+    required String message,
+    required this.operation,
+    this.modelName,
+    String? code,
+    dynamic originalError,
+    StackTrace? stackTrace,
+  }) : super(
+          message,
+          code: code ?? 'ML_ERROR',
+          originalError: originalError,
+          stackTrace: stackTrace,
+        );
+}
+
 /// Exception thrown when a permission is denied or not granted.
 class PermissionException extends SignSyncException {
   final String permissionType;
