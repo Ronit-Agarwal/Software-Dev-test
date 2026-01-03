@@ -1,0 +1,53 @@
+# Test Coverage Configuration
+
+# Paths to include in coverage
+include:
+  - lib
+
+# Paths to exclude from coverage
+exclude:
+  - lib/**/*.g.dart
+  - lib/**/*.freezed.dart
+  - lib/**/*.mocks.dart
+  - lib/generated_plugin_registrant.dart
+
+# Coverage report format
+format: lcov
+
+# Output directory
+output: coverage/
+
+# Minimum coverage percentage (85% target)
+min_coverage: 85
+
+# Report formatting
+report_on:
+  - lib/services/
+  - lib/screens/
+  - lib/widgets/
+  - lib/models/
+  - lib/utils/
+  - lib/core/
+
+# Specific thresholds for critical paths
+thresholds:
+  services: 90
+  models: 95
+  utils: 90
+  core: 85
+  screens: 80
+  widgets: 80
+
+# HTML report settings
+html:
+  output: coverage/html/
+  highlight_missing: true
+
+# LCOV report settings
+lcov:
+  output: coverage/lcov.info
+
+# Console report
+console:
+  show: line, branch
+  min_coverage_percentage: 85
