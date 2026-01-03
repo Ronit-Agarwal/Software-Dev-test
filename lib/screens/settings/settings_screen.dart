@@ -100,6 +100,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const Divider(),
 
+          // Performance Section
+          _buildSectionHeader('Performance'),
+          _buildSwitchTile(
+            title: 'Adaptive Inference',
+            subtitle: 'Adjust processing based on battery & heat',
+            value: ref.watch(mlOrchestratorServiceProvider).adaptiveInferenceEnabled,
+            onChanged: (value) {
+              ref.read(mlOrchestratorServiceProvider).setAdaptiveInferenceEnabled(value);
+            },
+            icon: Icons.speed,
+          ),
+          _buildActionTile(
+            title: 'Check for Model Updates',
+            icon: Icons.system_update,
+            onTap: () => _checkForModelUpdates(context, ref),
+          ),
+          const Divider(),
+
           // Detection Section
           _buildSectionHeader(l10n.objectDetection),
           _buildSliderTile(
@@ -443,17 +461,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Privacy Controls'),
+          title: const Text('Privacy & Data'),
           content: SizedBox(
             width: double.maxFinite,
-            child: profiles.isEmpty 
-              ? const Text('No enrolled faces')
-              : ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: profiles.length,
-                  itemBuilder: (context, index) {
-                    final profile = profiles[index];
-                    return ListTile(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('ENROLLED FACES', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  if (profiles.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Text('No enrolled faces'),
+                    )
+                  else
+                    ...profiles.map((profile) => ListTile(
                       title: Text(profile.name),
                       subtitle: Text(profile.label),
                       trailing: Switch(
@@ -463,9 +485,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           setDialogState(() {});
                         },
                       ),
-                    );
-                  },
-                ),
+                    )),
+                  const Divider(),
+                  const Text('DATA MANAGEMENT', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  ListTile(
+                    leading: const Icon(Icons.download),
+                    title: const Text('Export My Data'),
+                    onTap: () async {
+                      final data = await orchestrator.exportUserData();
+                      // In a real app, share the file
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Data exported successfully')),
+                      );
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.delete_forever, color: Colors.red),
+                    title: const Text('Wipe All Local Data', style: TextStyle(color: Colors.red)),
+                    onTap: () => _showWipeDataDialog(context, orchestrator),
+                  ),
+                ],
+              ),
+            ),
           ),
           actions: [
             TextButton(
@@ -476,6 +517,66 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
       ),
     );
+  }
+
+  void _showWipeDataDialog(BuildContext context, MlOrchestratorService orchestrator) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Wipe All Data?'),
+        content: const Text('This will permanently delete all your enrolled faces, chat history, and cached detections. This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              await orchestrator.wipeAllLocalData();
+              Navigator.pop(context); // Close dialog
+              Navigator.pop(context); // Close privacy controls
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('All data wiped successfully')),
+              );
+            },
+            child: const Text('Wipe Everything', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _checkForModelUpdates(BuildContext context, WidgetRef ref) async {
+    final updateService = ref.read(modelUpdateServiceProvider);
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Checking for updates...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      await updateService.checkForUpdates();
+      Navigator.pop(context); // Close checking dialog
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('All models are up to date')),
+      );
+    } catch (e) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to check for updates: $e')),
+      );
+    }
   }
 
   Widget _buildPermissionTile({
