@@ -14,3 +14,6 @@ export 'ml_orchestrator_service.dart';
 export 'tts_service.dart';
 export 'gemini_ai_service.dart';
 export 'chat_history_service.dart';
+export 'storage_service.dart';
+export 'model_update_service.dart';
+export 'consent_service.dart';

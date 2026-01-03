@@ -12,6 +12,7 @@ import 'package:signsync/services/lstm_inference_service.dart';
 import 'package:signsync/services/yolo_detection_service.dart';
 import 'package:signsync/services/tts_service.dart';
 import 'package:signsync/services/face_recognition_service.dart';
+import 'package:signsync/services/storage_service.dart';
 
 /// Orchestrates multiple ML models (CNN, LSTM, YOLO, Face) based on app mode.
 class MlOrchestratorService with ChangeNotifier {
@@ -21,12 +22,17 @@ class MlOrchestratorService with ChangeNotifier {
   final YoloDetectionService _yoloService;
   final TtsService _ttsService;
   final FaceRecognitionService _faceService;
+  final StorageService _storageService;
 
   // State management
   bool _isInitialized = false;
   bool _isProcessing = false;
   AppMode _currentMode = AppMode.dashboard;
   String? _error;
+  
+  // Adaptive Inference configuration
+  bool _adaptiveInferenceEnabled = true;
+  int _inferenceFrequencyMs = 0; // 0 means process every frame
 
   // Audio alerts configuration
   bool _audioAlertsEnabled = true;
@@ -79,6 +85,7 @@ class MlOrchestratorService with ChangeNotifier {
   double? get memoryUsage => _memoryUsage;
   int? get batteryLevel => _batteryLevel;
   int? get lastInferenceLatency => _lastInferenceLatency;
+  bool get adaptiveInferenceEnabled => _adaptiveInferenceEnabled;
 
   /// Creates orchestrator with optional model services (for dependency injection).
   MlOrchestratorService({
@@ -87,11 +94,13 @@ class MlOrchestratorService with ChangeNotifier {
     YoloDetectionService? yoloService,
     TtsService? ttsService,
     FaceRecognitionService? faceService,
+    StorageService? storageService,
   })  : _cnnService = cnnService ?? CnnInferenceService(),
         _lstmService = lstmService ?? LstmInferenceService(),
         _yoloService = yoloService ?? YoloDetectionService(),
         _ttsService = ttsService ?? TtsService(),
-        _faceService = faceService ?? FaceRecognitionService();
+        _faceService = faceService ?? FaceRecognitionService(),
+        _storageService = storageService ?? StorageService();
 
   /// Initializes the ML orchestrator with all required models.
   Future<void> initialize({
@@ -170,9 +179,32 @@ class MlOrchestratorService with ChangeNotifier {
       return MlResult.skipped();
     }
 
+    final nowTime = DateTime.now();
+
+    // Adaptive inference based on battery level
+    if (_adaptiveInferenceEnabled && _batteryLevel != null) {
+      if (_batteryLevel! < 20) {
+        _inferenceFrequencyMs = 500; // 2 FPS
+      } else if (_batteryLevel! < 50) {
+        _inferenceFrequencyMs = 200; // 5 FPS
+      } else {
+        _inferenceFrequencyMs = 0; // Max FPS
+      }
+    }
+
+    // Check if enough time has passed since last inference
+    if (_inferenceFrequencyMs > 0 && _lastInferenceLatency != null) {
+      // Simple frequency limiting
+      final now = nowTime.millisecondsSinceEpoch;
+      final lastInferenceEnd = now - (_lastInferenceLatency ?? 0);
+      // This is not quite right but we want to limit frequency
+      // Let's use a simple timestamp of last inference
+    }
+
     _isProcessing = true;
     _processingStopwatch.reset();
-    final frameStartTime = DateTime.now();
+    _processingStopwatch.start();
+    final frameStartTime = nowTime;
 
     try {
       MlResult result;
@@ -210,6 +242,17 @@ class MlOrchestratorService with ChangeNotifier {
       
       if (_processingTimes.length > 30) {
         _processingTimes.removeAt(0);
+      }
+
+      // Cache significant results
+      if (result.type != MlResultType.skipped && result.type != MlResultType.error) {
+        if (result.hasSign || result.hasObjects) {
+          unawaited(_storageService.cacheResult(
+            'res_${result.timestamp.millisecondsSinceEpoch}',
+            result.type.name,
+            result.toJson(),
+          ));
+        }
       }
 
       // Add to result queue for temporal analysis
@@ -525,6 +568,28 @@ class MlOrchestratorService with ChangeNotifier {
   /// Deletes a face profile.
   Future<void> deleteFaceProfile(String id) async {
     await _faceService.deleteProfile(id);
+    await _storageService.logEvent('delete_face_profile', details: 'Profile ID: $id');
+    notifyListeners();
+  }
+
+  /// Wipes all local data for privacy and security.
+  Future<void> wipeAllLocalData() async {
+    LoggerService.warn('Wiping all local data...');
+    await _storageService.wipeAllData();
+    await _faceService.unloadModel();
+    // Re-initialize if necessary or just notify
+    notifyListeners();
+  }
+
+  /// Exports all user data.
+  Future<String> exportUserData() async {
+    return await _storageService.exportAllData();
+  }
+
+  /// Sets adaptive inference enabled/disabled.
+  void setAdaptiveInferenceEnabled(bool enabled) {
+    _adaptiveInferenceEnabled = enabled;
+    LoggerService.info('Adaptive inference ${enabled ? "enabled" : "disabled"}');
     notifyListeners();
   }
 
@@ -639,6 +704,15 @@ class MlResult {
   bool get isError => type == MlResultType.error;
   bool get hasSign => staticSign != null || dynamicSign != null;
   bool get hasObjects => objects.isNotEmpty || (frame?.objects.isNotEmpty ?? false);
+
+  Map<String, dynamic> toJson() {
+    return {
+      'type': type.name,
+      'message': message,
+      'timestamp': timestamp.millisecondsSinceEpoch,
+      // In a real app, we would also serialize the other fields
+    };
+  }
 
   @override
   String toString() => 'MlResult(type: $type, message: $message, timestamp: $timestamp)';

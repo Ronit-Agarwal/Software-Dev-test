@@ -3,16 +3,20 @@ import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:signsync/core/error/exceptions.dart';
 import 'package:signsync/core/logging/logger_service.dart';
+import 'package:signsync/services/storage_service.dart';
 
 /// Service for managing app permissions across platforms.
 ///
 /// This service handles requesting, checking, and managing runtime
 /// permissions for camera, microphone, and storage access.
 class PermissionsService {
+  final StorageService? _storageService;
   PermissionStatus _cameraStatus = PermissionStatus.denied;
   PermissionStatus _microphoneStatus = PermissionStatus.denied;
   PermissionStatus _photoLibraryStatus = PermissionStatus.denied;
   PermissionStatus _notificationStatus = PermissionStatus.denied;
+
+  PermissionsService([this._storageService]);
 
   // Getters for permission statuses
   PermissionStatus get cameraStatus => _cameraStatus;
@@ -73,6 +77,10 @@ class PermissionsService {
       final status = await Permission.camera.request();
       _cameraStatus = status;
 
+      if (_storageService != null) {
+        await _storageService!.logEvent('request_camera_permission', details: status.toString());
+      }
+
       if (status.isGranted) {
         LoggerService.info('Camera permission granted');
         return true;
@@ -101,6 +109,10 @@ class PermissionsService {
       LoggerService.info('Requesting microphone permission');
       final status = await Permission.microphone.request();
       _microphoneStatus = status;
+
+      if (_storageService != null) {
+        await _storageService!.logEvent('request_microphone_permission', details: status.toString());
+      }
 
       if (status.isGranted) {
         LoggerService.info('Microphone permission granted');

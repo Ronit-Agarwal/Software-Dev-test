@@ -17,6 +17,9 @@ import 'package:signsync/services/asl_translation_service.dart';
 import 'package:signsync/services/audio_service.dart';
 import 'package:signsync/services/gemini_ai_service.dart';
 import 'package:signsync/services/chat_history_service.dart';
+import 'package:signsync/services/storage_service.dart';
+import 'package:signsync/services/model_update_service.dart';
+import 'package:signsync/services/consent_service.dart';
 
 /// Root provider for the application configuration.
 final appConfigProvider = ChangeNotifierProvider<AppConfig>((ref) {
@@ -30,8 +33,9 @@ final routerProvider = Provider<GoRouter>((ref) {
 });
 
 /// Provider for permissions service.
-final permissionsServiceProvider = Provider<PermissionsService>((_) {
-  return PermissionsService();
+final permissionsServiceProvider = Provider<PermissionsService>((ref) {
+  final storageService = ref.watch(storageServiceProvider);
+  return PermissionsService(storageService);
 });
 
 /// Provider for camera service.
@@ -112,6 +116,7 @@ final mlOrchestratorServiceProvider = ChangeNotifierProvider<MlOrchestratorServi
   final yoloService = ref.watch(yoloDetectionServiceProvider);
   final ttsService = ref.watch(ttsServiceProvider);
   final faceService = ref.watch(faceRecognitionServiceProvider);
+  final storageService = ref.watch(storageServiceProvider);
 
   return MlOrchestratorService(
     cnnService: cnnService,
@@ -119,6 +124,7 @@ final mlOrchestratorServiceProvider = ChangeNotifierProvider<MlOrchestratorServi
     yoloService: yoloService,
     ttsService: ttsService,
     faceService: faceService,
+    storageService: storageService,
   );
 });
 
@@ -188,6 +194,27 @@ final permissionStatusProvider = Provider<PermissionStatus>((ref) {
 final allPermissionsGrantedProvider = Provider<bool>((ref) {
   final permissionsService = ref.watch(permissionsServiceProvider);
   return permissionsService.allPermissionsGranted;
+});
+
+/// Provider for storage service.
+final storageServiceProvider = ChangeNotifierProvider<StorageService>((ref) {
+  final service = StorageService();
+  Future.microtask(() => service.initialize());
+  return service;
+});
+
+/// Provider for model update service.
+final modelUpdateServiceProvider = ChangeNotifierProvider<ModelUpdateService>((ref) {
+  final apiService = ApiService(); // Should use provider
+  return ModelUpdateService(apiService);
+});
+
+/// Provider for consent service.
+final consentServiceProvider = ChangeNotifierProvider<ConsentService>((ref) {
+  final storageService = ref.watch(storageServiceProvider);
+  final service = ConsentService(storageService);
+  Future.microtask(() => service.initialize());
+  return service;
 });
 
 /// Provider for high contrast mode.
