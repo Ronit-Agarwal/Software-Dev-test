@@ -1,13 +1,17 @@
+import 'dart:async';
+
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:signsync/config/providers.dart';
+import 'package:signsync/models/app_mode.dart';
 import 'package:signsync/models/asl_sign.dart';
 import 'package:signsync/models/camera_state.dart';
 import 'package:signsync/services/permissions_service.dart';
 import 'package:signsync/core/logging/logger_service.dart';
 import 'package:signsync/core/theme/colors.dart';
 import 'package:signsync/utils/constants.dart';
+import 'package:signsync/widgets/common/bottom_nav_bar.dart';
 import 'package:signsync/widgets/common/camera_preview.dart';
 import 'package:signsync/widgets/common/translation_display.dart';
 import 'package:signsync/widgets/translation/text_to_asl_widget.dart';
@@ -47,12 +51,21 @@ class _TranslationScreenState extends ConsumerState<TranslationScreen>
     );
     _tabController = TabController(length: 2, vsync: this);
 
-    _checkPermissions();
+    // Ensure global navigation state is aligned.
+    Future.microtask(() {
+      ref.read(appModeProvider.notifier).state = AppMode.translation;
+      ref.read(mlInferenceServiceProvider).switchMode(AppMode.translation);
+    });
+
+    unawaited(_checkPermissions());
     LoggerService.info('Translation screen initialized');
   }
 
   @override
   void dispose() {
+    // Ensure camera streaming is stopped when leaving the screen.
+    unawaited(ref.read(cameraServiceProvider).stopStreaming());
+
     _pulseController.dispose();
     _manualInputController.dispose();
     _tabController.dispose();
@@ -60,9 +73,15 @@ class _TranslationScreenState extends ConsumerState<TranslationScreen>
   }
 
   Future<void> _checkPermissions() async {
-    final permissionsService = ref.read(permissionsServiceProvider);
-    await permissionsService.requestCameraPermission();
-    await permissionsService.requestMicrophonePermission();
+    try {
+      final permissionsService = ref.read(permissionsServiceProvider);
+      await permissionsService.requestCameraPermission();
+      await permissionsService.requestMicrophonePermission();
+    } catch (e, stack) {
+      // During tests or unsupported platforms, permission plugins can be
+      // unavailable. The UI should still render in a degraded mode.
+      LoggerService.warn('Permission request failed (non-fatal)', error: e, stack: stack);
+    }
   }
 
   Future<void> _toggleTranslation() async {
@@ -180,12 +199,22 @@ class _TranslationScreenState extends ConsumerState<TranslationScreen>
           const TextToAslWidget(),
         ],
       ),
+      bottomNavigationBar: SignSyncBottomNavBar(
+        currentIndex: ref.watch(appModeProvider).navigationIndex,
+        onIndexChanged: (index) {
+          final mode = AppMode.fromNavigationIndex(index);
+          ref.read(appModeProvider.notifier).state = mode;
+          try {
+            Navigator.of(context).pushReplacementNamed(mode.routePath);
+          } catch (_) {
+            // Ignore navigation failures in widget tests.
+          }
+        },
+      ),
     );
   }
 
   Widget _buildSignToTextTab() {
-    final cameraInitialized = ref.watch(cameraInitializedProvider);
-
     return Column(
       children: [
         // Camera Preview Area
@@ -193,19 +222,13 @@ class _TranslationScreenState extends ConsumerState<TranslationScreen>
           flex: 3,
           child: Stack(
             children: [
-              // Camera Preview
-              if (cameraInitialized)
-                const CameraPreviewWidget()
-              else
-                _buildCameraPlaceholder(),
+              const CameraPreviewWidget(),
 
               // Detection Overlay
-              if (_isProcessing)
-                _buildDetectionOverlay(),
+              if (_isProcessing) _buildDetectionOverlay(),
 
               // Processing Indicator
-              if (_isProcessing)
-                _buildProcessingIndicator(),
+              if (_isProcessing) _buildProcessingIndicator(),
             ],
           ),
         ),

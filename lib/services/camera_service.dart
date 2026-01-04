@@ -73,51 +73,73 @@ class CameraService with ChangeNotifier {
       LoggerService.info('Camera service initializing...');
     }
 
+    // Start initialization timeout early so it actually covers the full init.
+    _initTimeout?.cancel();
+    _initTimeout = Timer(_initTimeoutDuration, () {
+      if (_state == CameraState.initializing) {
+        LoggerService.warn('Camera initialization timed out');
+        _setError('Camera initialization timed out. Please try again.');
+        _setState(CameraState.error);
+      }
+    });
+
     try {
       _setState(CameraState.initializing);
       _error = null;
       _retryCount = 0;
 
-      // Load camera preferences
       await _loadCameraPreferences();
 
-      // Check and request permissions
       final hasPermission = await _checkAndRequestPermission();
       if (!hasPermission) {
+        _error = 'Camera permission is required to use camera features.';
         _setState(CameraState.permissionDenied);
-        throw const CameraException(
-          'permission_denied',
-          'Camera permission is required to use camera features',
-        );
+        _initTimeout?.cancel();
+        return;
       }
 
-      // Get available cameras
-      _cameras = await availableCameras();
+      try {
+        _cameras = await availableCameras();
+      } on MissingPluginException catch (e, stack) {
+        LoggerService.warn('Camera plugin unavailable on this platform', error: e, stack: stack);
+        _error = 'Camera is not available on this platform.';
+        _setState(CameraState.noCamerasAvailable);
+        _initTimeout?.cancel();
+        return;
+      } on PlatformException catch (e, stack) {
+        LoggerService.error('Failed to enumerate cameras', error: e, stack: stack);
+        _error = 'Failed to access cameras. Please try again.';
+        _setState(CameraState.error);
+        _initTimeout?.cancel();
+        return;
+      }
+
       LoggerService.debug('Found ${_cameras.length} cameras');
 
       if (_cameras.isEmpty) {
+        _error = 'No cameras available on this device.';
         _setState(CameraState.noCamerasAvailable);
-        throw const CameraException(
-          'no_cameras',
-          'No cameras available on this device',
-        );
+        _initTimeout?.cancel();
+        return;
       }
 
-      // Select the preferred camera
       await _selectPreferredCamera();
 
       _setState(CameraState.ready);
+      _initTimeout?.cancel();
       LoggerService.info('Camera service initialized successfully');
-
-      // Start initialization timeout
-      _initTimeout = Timer(_initTimeoutDuration, () {
-        if (_state == CameraState.initializing) {
-          LoggerService.warn('Camera initialization timed out');
-          _setError('Camera initialization timed out. Please try again.');
-        }
-      });
-
     } catch (e, stack) {
+      // Preserve explicit states (permission denied / no cameras) rather than
+      // masking them as generic "error".
+      if (_state == CameraState.permissionDenied || _state == CameraState.noCamerasAvailable) {
+        _error ??= e.toString();
+        LoggerService.warn('Camera initialization stopped: $_error', error: e, stack: stack);
+        _initTimeout?.cancel();
+        notifyListeners();
+        return;
+      }
+
+      _initTimeout?.cancel();
       _handleError(e, stack, 'initialize');
     }
   }

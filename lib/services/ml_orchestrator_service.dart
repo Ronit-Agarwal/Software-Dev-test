@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:math';
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:signsync/core/error/exceptions.dart';
@@ -155,6 +156,9 @@ class MlOrchestratorService with ChangeNotifier {
         case AppMode.chat:
           // Chat mode may use different models in future
           break;
+        case AppMode.settings:
+          // Settings mode doesn't require model initialization.
+          break;
       }
 
       _isInitialized = true;
@@ -222,6 +226,9 @@ class MlOrchestratorService with ChangeNotifier {
           break;
         case AppMode.chat:
           result = MlResult.skipped(); // Chat mode may use different processing
+          break;
+        case AppMode.settings:
+          result = MlResult.skipped();
           break;
       }
 
@@ -405,6 +412,7 @@ class MlOrchestratorService with ChangeNotifier {
 
     // Load models for new mode if needed
     switch (newMode) {
+      case AppMode.dashboard:
       case AppMode.translation:
         if (_enableCnn && !_cnnService.isModelLoaded) {
           await _cnnService.initialize();
@@ -419,10 +427,9 @@ class MlOrchestratorService with ChangeNotifier {
         }
         break;
       case AppMode.sound:
-        // No visual models needed
-        break;
       case AppMode.chat:
-        // May need to unload heavy models
+      case AppMode.settings:
+        // No visual models needed.
         break;
     }
 

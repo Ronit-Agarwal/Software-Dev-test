@@ -1,3 +1,5 @@
+import 'dart:math';
+import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:equatable/equatable.dart';
@@ -300,7 +302,7 @@ enum CameraProcessingMode {
 
 /// Circular buffer for temporal frame analysis.
 class FrameBuffer with ChangeNotifier {
-  final int _capacity;
+  int _capacity;
   final List<CameraFrame> _frames = [];
   int _maxLatencyMs = 0;
 
@@ -308,6 +310,18 @@ class FrameBuffer with ChangeNotifier {
 
   /// Maximum number of frames the buffer can hold.
   int get capacity => _capacity;
+
+  /// Updates the buffer capacity.
+  ///
+  /// If the new capacity is smaller than the current length, oldest frames are
+  /// dropped to fit.
+  void setCapacity(int capacity) {
+    _capacity = max(1, capacity);
+    if (_frames.length > _capacity) {
+      _frames.removeRange(0, _frames.length - _capacity);
+    }
+    notifyListeners();
+  }
 
   /// Current number of frames in the buffer.
   int get length => _frames.length;

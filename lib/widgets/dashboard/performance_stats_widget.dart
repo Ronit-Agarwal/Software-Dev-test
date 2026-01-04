@@ -46,6 +46,7 @@ class _PerformanceStatsWidgetState extends ConsumerState<PerformanceStatsWidget>
   @override
   Widget build(BuildContext context) {
     return Card(
+      key: const Key('performance-stats'),
       elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(AppConstants.spacingMd),

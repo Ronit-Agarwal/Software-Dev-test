@@ -9,7 +9,8 @@ enum AppMode {
   translation('ASL Translation', 'Translate ASL signs to text'),
   detection('Object Detection', 'Identify objects in your surroundings'),
   sound('Sound Alerts', 'Detect and alert for important sounds'),
-  chat('AI Chat', 'Chat with AI about sign language');
+  chat('AI Chat', 'Chat with AI about sign language'),
+  settings('Settings', 'App configuration and preferences');
 
   final String displayName;
   final String description;
@@ -29,6 +30,8 @@ enum AppMode {
         return '/sound';
       case AppMode.chat:
         return '/chat';
+      case AppMode.settings:
+        return '/settings';
     }
   }
 
@@ -45,6 +48,8 @@ enum AppMode {
         return 'sound';
       case AppMode.chat:
         return 'chat';
+      case AppMode.settings:
+        return 'settings';
     }
   }
 
@@ -61,6 +66,8 @@ enum AppMode {
         return 3;
       case AppMode.chat:
         return 4;
+      case AppMode.settings:
+        return 5;
     }
   }
 
@@ -76,6 +83,8 @@ enum AppMode {
       case AppMode.sound:
         return AppMode.chat;
       case AppMode.chat:
+        return AppMode.settings;
+      case AppMode.settings:
         return AppMode.dashboard;
     }
   }
@@ -84,7 +93,7 @@ enum AppMode {
   AppMode get previous {
     switch (this) {
       case AppMode.dashboard:
-        return AppMode.chat;
+        return AppMode.settings;
       case AppMode.translation:
         return AppMode.dashboard;
       case AppMode.detection:
@@ -93,6 +102,8 @@ enum AppMode {
         return AppMode.detection;
       case AppMode.chat:
         return AppMode.sound;
+      case AppMode.settings:
+        return AppMode.chat;
     }
   }
 
@@ -109,6 +120,8 @@ enum AppMode {
         return AppMode.sound;
       case 4:
         return AppMode.chat;
+      case 5:
+        return AppMode.settings;
       default:
         return AppMode.dashboard;
     }
@@ -127,6 +140,8 @@ enum AppMode {
         return AppMode.sound;
       case '/chat':
         return AppMode.chat;
+      case '/settings':
+        return AppMode.settings;
       default:
         return AppMode.dashboard;
     }
