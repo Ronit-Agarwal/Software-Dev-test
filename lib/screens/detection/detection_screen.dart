@@ -24,7 +24,7 @@ class DetectionScreen extends ConsumerStatefulWidget {
 class _DetectionScreenState extends ConsumerState<DetectionScreen> {
   bool _isProcessing = false;
   DetectionFrame? _currentFrame;
-  final List<DetectedObject> _recentObjects = [];
+  List<DetectedObject> _recentObjects = [];
 
   @override
   void initState() {

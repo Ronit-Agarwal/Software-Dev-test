@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:signsync/core/error/global_error_handler.dart';
 
 /// Service for structured logging throughout the app.
 ///
@@ -221,7 +222,9 @@ class PerformanceTrace {
   final Stopwatch _stopwatch;
   final Map<String, dynamic> _metrics;
 
-  PerformanceTrace(this._operation) : _stopwatch = Stopwatch();
+  PerformanceTrace(this._operation)
+      : _stopwatch = Stopwatch(),
+        _metrics = <String, dynamic>{};
 
   /// Starts the trace.
   void start() {

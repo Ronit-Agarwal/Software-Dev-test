@@ -92,7 +92,7 @@ class FrameExtractor with ChangeNotifier {
     }
     _config = newConfig;
     _frameBuffer.clear();
-    _frameBuffer._capacity = newConfig.maxBufferSize;
+    _frameBuffer.setCapacity(newConfig.maxBufferSize);
     notifyListeners();
   }
 

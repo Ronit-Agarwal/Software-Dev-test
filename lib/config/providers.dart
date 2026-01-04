@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:signsync/config/app_config.dart';
@@ -40,7 +43,13 @@ final permissionsServiceProvider = Provider<PermissionsService>((ref) {
 
 /// Provider for camera service.
 final cameraServiceProvider = ChangeNotifierProvider<CameraService>((ref) {
-  return CameraService();
+  final service = CameraService(
+    permissionsService: ref.watch(permissionsServiceProvider),
+  );
+  ref.onDispose(() {
+    unawaited(service.dispose());
+  });
+  return service;
 });
 
 /// Provider for ASL translation service (English to ASL).

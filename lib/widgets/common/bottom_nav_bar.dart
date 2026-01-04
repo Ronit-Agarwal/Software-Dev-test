@@ -21,47 +21,44 @@ class SignSyncBottomNavBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return NavigationBar(
-      selectedIndex: currentIndex,
-      onDestinationSelected: onIndexChanged,
-      destinations: _buildDestinations(),
+    return BottomNavigationBar(
+      currentIndex: currentIndex,
+      onTap: onIndexChanged,
+      type: BottomNavigationBarType.fixed,
+      items: _buildItems(),
+      selectedItemColor: Theme.of(context).colorScheme.primary,
+      unselectedItemColor: Theme.of(context).colorScheme.onSurfaceVariant,
       backgroundColor: Theme.of(context).colorScheme.surface,
-      indicatorColor: Theme.of(context).colorScheme.primaryContainer,
-      elevation: 8,
+      showSelectedLabels: true,
+      showUnselectedLabels: true,
     );
   }
 
-  List<NavigationDestination> _buildDestinations() {
-    return [
-      const NavigationDestination(
+  List<BottomNavigationBarItem> _buildItems() {
+    return const [
+      BottomNavigationBarItem(
         icon: Icon(Icons.dashboard),
-        selectedIcon: Icon(Icons.dashboard),
-        label: 'Home',
-        tooltip: 'Dashboard',
+        label: 'Dashboard',
       ),
-      const NavigationDestination(
+      BottomNavigationBarItem(
         icon: Icon(Icons.translate),
-        selectedIcon: Icon(Icons.translate),
-        label: 'ASL',
-        tooltip: 'ASL Translation',
+        label: 'Translation',
       ),
-      const NavigationDestination(
+      BottomNavigationBarItem(
         icon: Icon(Icons.visibility),
-        selectedIcon: Icon(Icons.visibility),
-        label: 'Detect',
-        tooltip: 'Object Detection',
+        label: 'Detection',
       ),
-      const NavigationDestination(
+      BottomNavigationBarItem(
         icon: Icon(Icons.volume_up),
-        selectedIcon: Icon(Icons.volume_up),
         label: 'Sound',
-        tooltip: 'Sound Alerts',
       ),
-      const NavigationDestination(
+      BottomNavigationBarItem(
         icon: Icon(Icons.chat),
-        selectedIcon: Icon(Icons.chat),
-        label: 'Chat',
-        tooltip: 'AI Chat',
+        label: 'AI Chat',
+      ),
+      BottomNavigationBarItem(
+        icon: Icon(Icons.settings),
+        label: 'Settings',
       ),
     ];
   }

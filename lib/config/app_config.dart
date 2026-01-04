@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:signsync/core/theme/app_theme.dart';
 
 /// Application configuration that can be customized by the user.
 class AppConfig with ChangeNotifier {
@@ -108,11 +106,6 @@ class AppConfig with ChangeNotifier {
     notifyListeners();
   }
 }
-
-/// Provider for the application configuration.
-final appConfigProvider = ChangeNotifierProvider<AppConfig>((_) {
-  return AppConfig();
-});
 
 /// Extension on ThemeMode for readable strings.
 extension ThemeModeExtension on ThemeMode {

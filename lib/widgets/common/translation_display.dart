@@ -146,13 +146,19 @@ class TranslationDisplayWidget extends ConsumerWidget {
           ),
           const SizedBox(height: AppConstants.spacingMd),
           Text(
-            'No sign detected',
+            'Detecting signs...',
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 4),
           Text(
-            'Start the camera to begin translation',
+            'Confidence: --',
             style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Hold your hands clearly in view of the camera.',
+            style: Theme.of(context).textTheme.bodySmall,
+            textAlign: TextAlign.center,
           ),
         ],
       ),

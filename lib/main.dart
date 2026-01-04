@@ -4,10 +4,15 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:signsync/core/error/global_error_handler.dart';
 import 'package:signsync/core/logging/logger_service.dart';
-import 'package:signsync/core/navigation/app_router.dart';
 import 'package:signsync/core/theme/app_theme.dart';
 import 'package:signsync/config/providers.dart';
 import 'package:signsync/config/app_config.dart';
+import 'package:signsync/screens/chat/chat_screen.dart';
+import 'package:signsync/screens/dashboard/dashboard_screen.dart';
+import 'package:signsync/screens/detection/detection_screen.dart';
+import 'package:signsync/screens/settings/settings_screen.dart';
+import 'package:signsync/screens/sound/sound_screen.dart';
+import 'package:signsync/screens/translation/translation_screen.dart';
 
 /// Main entry point for the SignSync application.
 ///
@@ -63,10 +68,7 @@ class SignSyncApp extends ConsumerWidget {
     // Get the app configuration
     final config = ref.watch(appConfigProvider);
 
-    // Get the GoRouter instance
-    final router = ref.watch(routerProvider);
-
-    return MaterialApp.router(
+    return MaterialApp(
       // App configuration
       title: AppConfig.appName,
       debugShowCheckedModeBanner: AppConfig.isDebugMode,
@@ -86,8 +88,16 @@ class SignSyncApp extends ConsumerWidget {
       ],
       supportedLocales: AppConfig.supportedLocales,
 
-      // Routing
-      routerConfig: router,
+      initialRoute: '/dashboard',
+      routes: {
+        '/': (_) => const DashboardScreen(),
+        '/dashboard': (_) => const DashboardScreen(),
+        '/translation': (_) => const TranslationScreen(),
+        '/detection': (_) => const DetectionScreen(),
+        '/sound': (_) => const SoundScreen(),
+        '/chat': (_) => const ChatScreen(),
+        '/settings': (_) => const SettingsScreen(),
+      },
 
       // Accessibility
       builder: (context, child) {
