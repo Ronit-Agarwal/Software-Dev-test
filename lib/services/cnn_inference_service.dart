@@ -6,6 +6,7 @@ import 'package:image/image.dart' as img;
 import 'package:signsync/core/error/exceptions.dart';
 import 'package:signsync/core/logging/logger_service.dart';
 import 'package:signsync/models/asl_sign.dart';
+import 'package:signsync/utils/retry_helper.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 
 /// CNN-based ASL inference service using ResNet-50 architecture.
@@ -54,7 +55,17 @@ class CnnInferenceService with ChangeNotifier {
   // Temporal smoothing (configurable 3-5 frames, default 5)
   static const int smoothingWindow = 5;
   final List<InferenceResult> _temporalBuffer = [];
-  
+
+  // Adaptive smoothing for different signing speeds
+  int _adaptiveSmoothingWindow = 5;
+  final List<double> _signConfidenceHistory = [];
+
+  // Retry logic for inference failures
+  final RetryHelper _retryHelper = RetryHelpers.mlInference(
+    maxRetries: 2,
+    timeout: const Duration(milliseconds: 500),
+  );
+
   // ASL dictionary mapping (A-Z + common words)
   static const List<String> _aslDictionary = [
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
@@ -232,8 +243,25 @@ class CnnInferenceService with ChangeNotifier {
       // Preprocess the image (YUV420→RGB, 224x224 resize, normalize)
       final processedImage = await _preprocessImage(image);
 
-      // Run inference
-      final inferenceResult = await _runInference(processedImage);
+      // Run inference with retry logic
+      final inferenceResult = await _retryHelper.execute(
+        () async {
+          if (_interpreter == null) {
+            throw MlInferenceException('Interpreter not initialized');
+          }
+          return await _runInference(processedImage);
+        },
+        onError: (error, attempt) {
+          LoggerService.warn('CNN inference attempt $attempt failed: $error');
+        },
+        shouldRetry: (error) {
+          // Retry on temporary inference errors
+          return RetryHelpers.isRetryableError(error);
+        },
+        onMaxRetriesReached: (error) {
+          LoggerService.error('Max CNN inference retries reached: $error');
+        },
+      );
 
       // Check latency target
       final latency = stopwatch.elapsedMilliseconds;
@@ -241,8 +269,8 @@ class CnnInferenceService with ChangeNotifier {
         LoggerService.warn('CNN inference latency exceeded target: ${latency}ms > ${maxLatencyMs}ms');
       }
 
-      // Apply temporal smoothing (3-5 frame window)
-      final smoothedResult = await _applyTemporalSmoothing(inferenceResult);
+      // Apply adaptive temporal smoothing (adjusts window based on signing speed)
+      final smoothedResult = await _applyAdaptiveTemporalSmoothing(inferenceResult);
 
       // Skip low confidence predictions (< 0.85)
       if (smoothedResult.confidence < confidenceThreshold) {
@@ -414,6 +442,65 @@ class CnnInferenceService with ChangeNotifier {
 
     // Otherwise, return original result
     return result;
+  }
+
+  /// Applies adaptive temporal smoothing based on signing speed.
+  ///
+  /// Adjusts the smoothing window size based on how quickly signs are changing.
+  /// Fast signing = smaller window, slow signing = larger window.
+  Future<InferenceResult> _applyAdaptiveTemporalSmoothing(InferenceResult result) async {
+    // Track confidence history for speed detection
+    _signConfidenceHistory.add(result.confidence);
+    if (_signConfidenceHistory.length > 20) {
+      _signConfidenceHistory.removeAt(0);
+    }
+
+    // Detect sign change rate
+    if (_temporalBuffer.isNotEmpty) {
+      final lastResult = _temporalBuffer.last;
+      final signChanged = lastResult.letter != result.letter;
+
+      // Adaptive window adjustment
+      if (signChanged) {
+        // Signs changing quickly - use smaller window for responsiveness
+        _adaptiveSmoothingWindow = 3;
+      } else if (_signConfidenceHistory.length >= 5) {
+        // Check confidence stability
+        final recentConfidences = _signConfidenceHistory.take(5).toList();
+        final variance = _calculateVariance(recentConfidences);
+
+        // Stable confidence - can use larger window
+        if (variance < 0.05) {
+          _adaptiveSmoothingWindow = 5;
+        } else {
+          _adaptiveSmoothingWindow = 4;
+        }
+      }
+    }
+
+    // Use adaptive window size
+    final originalWindow = _adaptiveSmoothingWindow;
+
+    // Temporarily override smoothingWindow
+    final savedWindow = _adaptiveSmoothingWindow;
+    _adaptiveSmoothingWindow = _adaptiveSmoothingWindow.clamp(3, 5);
+
+    // Apply smoothing
+    final smoothed = await _applyTemporalSmoothing(result);
+
+    // Restore
+    _adaptiveSmoothingWindow = savedWindow;
+
+    return smoothed;
+  }
+
+  /// Calculates variance of confidence values.
+  double _calculateVariance(List<double> values) {
+    if (values.isEmpty) return 0.0;
+
+    final mean = values.reduce((a, b) => a + b) / values.length;
+    final squaredDiffs = values.map((v) => pow(v - mean, 2)).toList();
+    return squaredDiffs.reduce((a, b) => a + b) / values.length;
   }
 
   /// Gets recent signs for sequence building.

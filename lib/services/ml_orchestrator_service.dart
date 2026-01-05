@@ -65,6 +65,16 @@ class MlOrchestratorService with ChangeNotifier {
   double _objectConfidenceThreshold = 0.60;
   double _faceConfidenceThreshold = 0.75;
 
+  // Mode switching protection
+  DateTime? _lastModeSwitchTime;
+  static const Duration _modeSwitchCooldown = Duration(milliseconds: 300);
+
+  // Battery saver mode
+  bool _batterySaverMode = false;
+
+  // Mode state protection
+  bool _modeSwitchInProgress = false;
+
   // Getters
   bool get isInitialized => _isInitialized;
   bool get isProcessing => _isProcessing;
@@ -86,6 +96,8 @@ class MlOrchestratorService with ChangeNotifier {
   int? get batteryLevel => _batteryLevel;
   int? get lastInferenceLatency => _lastInferenceLatency;
   bool get adaptiveInferenceEnabled => _adaptiveInferenceEnabled;
+  bool get batterySaverMode => _batterySaverMode;
+  bool get modeSwitchInProgress => _modeSwitchInProgress;
 
   /// Creates orchestrator with optional model services (for dependency injection).
   MlOrchestratorService({
@@ -174,6 +186,11 @@ class MlOrchestratorService with ChangeNotifier {
       throw MlOrchestratorException('ML orchestrator not initialized. Call initialize() first.');
     }
 
+    // Skip processing if mode switch is in progress
+    if (_modeSwitchInProgress) {
+      return MlResult.skipped();
+    }
+
     if (_isProcessing) {
       LoggerService.warn('ML processing already in progress, skipping frame');
       return MlResult.skipped();
@@ -181,24 +198,27 @@ class MlOrchestratorService with ChangeNotifier {
 
     final nowTime = DateTime.now();
 
-    // Adaptive inference based on battery level
+    // Adaptive inference based on battery level and battery saver mode
     if (_adaptiveInferenceEnabled && _batteryLevel != null) {
-      if (_batteryLevel! < 20) {
-        _inferenceFrequencyMs = 500; // 2 FPS
+      if (_batterySaverMode) {
+        _inferenceFrequencyMs = 1000; // 1 FPS in battery saver
+      } else if (_batteryLevel! < 20) {
+        _inferenceFrequencyMs = 500; // 2 FPS at low battery
       } else if (_batteryLevel! < 50) {
-        _inferenceFrequencyMs = 200; // 5 FPS
+        _inferenceFrequencyMs = 200; // 5 FPS at medium battery
       } else {
-        _inferenceFrequencyMs = 0; // Max FPS
+        _inferenceFrequencyMs = 0; // Max FPS otherwise
       }
     }
 
     // Check if enough time has passed since last inference
     if (_inferenceFrequencyMs > 0 && _lastInferenceLatency != null) {
-      // Simple frequency limiting
       final now = nowTime.millisecondsSinceEpoch;
       final lastInferenceEnd = now - (_lastInferenceLatency ?? 0);
-      // This is not quite right but we want to limit frequency
-      // Let's use a simple timestamp of last inference
+      // Simple frequency limiting
+      if (lastInferenceEnd < _inferenceFrequencyMs) {
+        return MlResult.skipped();
+      }
     }
 
     _isProcessing = true;
@@ -231,15 +251,15 @@ class MlOrchestratorService with ChangeNotifier {
       _processingTimes.add(processingTime);
       _totalFramesProcessed++;
       _lastInferenceLatency = processingTime.toInt();
-      
+
       _framesPerMode[_currentMode] = (_framesPerMode[_currentMode] ?? 0) + 1;
-      
+
       // Simulate system stats (in real implementation, use device_info_plus)
       if (_totalFramesProcessed % 30 == 0) {
         _memoryUsage = 120 + (_totalFramesProcessed % 50).toDouble();
         _batteryLevel = (90 - (_totalFramesProcessed / 100)).toInt().clamp(0, 100);
       }
-      
+
       if (_processingTimes.length > 30) {
         _processingTimes.removeAt(0);
       }
@@ -262,7 +282,7 @@ class MlOrchestratorService with ChangeNotifier {
       }
 
       LoggerService.debug('ML processing: $result in ${processingTime}ms');
-      
+
       notifyListeners();
       return result;
     } catch (e, stack) {
@@ -398,47 +418,78 @@ class MlOrchestratorService with ChangeNotifier {
       return;
     }
 
+    // Check mode switch cooldown to prevent rapid switching
+    if (_modeSwitchInProgress) {
+      LoggerService.warn('Mode switch already in progress, ignoring request');
+      return;
+    }
+
+    if (_lastModeSwitchTime != null) {
+      final timeSinceLastSwitch = DateTime.now().difference(_lastModeSwitchTime!);
+      if (timeSinceLastSwitch < _modeSwitchCooldown) {
+        LoggerService.warn('Mode switch requested too quickly, ignoring (${timeSinceLastSwitch.inMilliseconds}ms < ${_modeSwitchCooldown.inMilliseconds}ms)');
+        return;
+      }
+    }
+
+    _modeSwitchInProgress = true;
+    notifyListeners();
+
     LoggerService.info('Switching ML mode from $_currentMode to $newMode');
-    
+
     final oldMode = _currentMode;
     _currentMode = newMode;
+    _lastModeSwitchTime = DateTime.now();
 
-    // Load models for new mode if needed
-    switch (newMode) {
-      case AppMode.translation:
-        if (_enableCnn && !_cnnService.isModelLoaded) {
-          await _cnnService.initialize();
-        }
-        if (_enableLstm && !_lstmService.isModelLoaded) {
-          await _lstmService.initialize();
-        }
-        break;
-      case AppMode.detection:
-        if (_enableYolo && !_yoloService.isModelLoaded) {
-          await _yoloService.initialize();
-        }
-        break;
-      case AppMode.sound:
-        // No visual models needed
-        break;
-      case AppMode.chat:
-        // May need to unload heavy models
-        break;
-    }
+    try {
+      // Load models for new mode if needed
+      switch (newMode) {
+        case AppMode.translation:
+          if (_enableCnn && !_cnnService.isModelLoaded) {
+            await _cnnService.initialize();
+          }
+          if (_enableLstm && !_lstmService.isModelLoaded) {
+            await _lstmService.initialize();
+          }
+          break;
+        case AppMode.detection:
+          if (_enableYolo && !_yoloService.isModelLoaded) {
+            await _yoloService.initialize();
+          }
+          break;
+        case AppMode.sound:
+          // No visual models needed
+          break;
+        case AppMode.chat:
+          // May need to unload heavy models
+          break;
+      }
 
-    // Unload models from old mode to free resources
-    if (oldMode == AppMode.translation) {
-      // Keep models loaded for fast switching, but could unload if needed
-    } else if (oldMode == AppMode.detection) {
-      // Keep YOLO loaded for fast switching
-    }
+      // Unload models from old mode to free resources (only in memory pressure)
+      if (_batteryLevel != null && _batteryLevel! < 30) {
+        // Low battery - unload unused models
+        if (oldMode == AppMode.translation) {
+          // Could unload CNN/LSTM to save memory
+          // For now, keep them loaded for fast switching
+        } else if (oldMode == AppMode.detection) {
+          // Could unload YOLO to save memory
+          // For now, keep it loaded for fast switching
+        }
+      }
 
-    _resetModeState();
-    notifyListeners();
-    
-    // Process current frame in new mode if provided
-    if (currentFrame != null) {
-      unawaited(processFrame(currentFrame));
+      _resetModeState();
+
+      // Process current frame in new mode if provided
+      if (currentFrame != null) {
+        unawaited(processFrame(currentFrame));
+      }
+    } catch (e, stack) {
+      LoggerService.error('Failed to switch mode', error: e, stack: stack);
+      // Revert to old mode on error
+      _currentMode = oldMode;
+    } finally {
+      _modeSwitchInProgress = false;
+      notifyListeners();
     }
   }
 
@@ -520,6 +571,13 @@ class MlOrchestratorService with ChangeNotifier {
   Future<void> setTtsSpeechRate(double rate) async {
     await _ttsService.setSpeechRate(rate);
     notifyListeners();
+  }
+
+  /// Enables or disables battery saver mode.
+  void setBatterySaverMode(bool enabled) {
+    _batterySaverMode = enabled;
+    notifyListeners();
+    LoggerService.info('Battery saver mode ${enabled ? "enabled" : "disabled"}');
   }
 
   /// Gets TTS service statistics.
