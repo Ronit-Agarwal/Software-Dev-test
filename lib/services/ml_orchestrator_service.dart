@@ -352,8 +352,16 @@ class MlOrchestratorService with ChangeNotifier {
         if (_enableFace) {
           final persons = objects.where((obj) => obj.label == 'person').toList();
           if (persons.isNotEmpty) {
-            // Run face recognition on the first person detected (for now)
-            faceResult = await _faceService.processFrame(image, faceRect: persons.first.boundingBox);
+            // Extract all face bounding boxes for multiple face handling
+            final faceRects = persons.map((p) => p.boundingBox).toList();
+            
+            // Run face recognition with all detected faces
+            faceResult = await _faceService.processFrame(
+              image, 
+              faceRect: persons.first.boundingBox,
+              allFaces: faceRects,
+            );
+            
             if (faceResult != null && faceResult.confidence >= _faceConfidenceThreshold) {
               _latestFace = faceResult;
               message = '${faceResult.profile.name} detected at ${persons.first.distance?.toStringAsFixed(1)} feet';

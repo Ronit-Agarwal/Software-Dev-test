@@ -131,15 +131,24 @@ class YoloDetectionService with ChangeNotifier {
     try {
       LoggerService.debug('Loading YOLO model from $modelPath');
       
+      // Add timeout to prevent hanging on slow devices
       _interpreter = await Interpreter.fromAsset(
         modelPath,
         options: InterpreterOptions()
           ..threads = 4
           ..useNnApiForAndroid = true,
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw TimeoutException('YOLO model loading timeout after 30 seconds');
+        },
       );
       
       LoggerService.info('YOLO model loaded successfully');
       _validateModel();
+    } on TimeoutException catch (e, stack) {
+      LoggerService.error('YOLO model loading timed out', error: e, stack: stack);
+      throw ModelLoadException('YOLO model loading timed out: $e');
     } catch (e, stack) {
       LoggerService.error('Failed to load YOLO model', error: e, stack: stack);
       throw ModelLoadException('Failed to load YOLO model: $e');
@@ -668,4 +677,20 @@ class YoloException implements Exception {
 
   @override
   String toString() => 'YoloException: $message';
+}
+
+/// Disposes of YOLO service and releases resources.
+@override
+void dispose() {
+  LoggerService.info('Disposing YOLO detection service');
+  _interpreter?.close();
+  _interpreter = null;
+  _isModelLoaded = false;
+  _frameHistory.clear();
+  _objectFrequency.clear();
+  _firstSeen.clear();
+  _distanceCache.clear();
+  _inferenceTimes.clear();
+  _detectionCountHistory.clear();
+  super.dispose();
 }

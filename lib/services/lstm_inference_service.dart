@@ -114,13 +114,22 @@ class LstmInferenceService with ChangeNotifier {
     try {
       LoggerService.debug('Loading LSTM model from $modelPath');
       
+      // Add timeout to prevent hanging on slow devices
       _interpreter = await Interpreter.fromAsset(
         modelPath,
         options: InterpreterOptions()..threads = 2,
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw TimeoutException('LSTM model loading timeout after 30 seconds');
+        },
       );
       
       LoggerService.info('LSTM model loaded successfully');
       _validateLstmModel();
+    } on TimeoutException catch (e, stack) {
+      LoggerService.error('LSTM model loading timed out', error: e, stack: stack);
+      throw ModelLoadException('LSTM model loading timed out: $e');
     } catch (e, stack) {
       LoggerService.error('Failed to load LSTM model', error: e, stack: stack);
       
@@ -542,6 +551,22 @@ class LstmResult {
 
   @override
   String toString() => 'LstmResult(label: $label, confidence: ${confidence.toStringAsFixed(3)})';
+}
+
+/// Disposes the LSTM service and releases resources.
+@override
+void dispose() {
+  LoggerService.info('Disposing LSTM inference service');
+  _interpreter?.close();
+  _interpreter = null;
+  _isModelLoaded = false;
+  _frameBuffer.clear();
+  _frameTimestamps.clear();
+  _cnnResults.clear();
+  _dynamicSignHistory.clear();
+  _inferenceTimes.clear();
+  _sequencesProcessed.clear();
+  super.dispose();
 }
 
 /// Extension to copy Float32List into another list.
