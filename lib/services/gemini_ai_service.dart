@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:signsync/core/error/exceptions.dart';
 import 'package:signsync/core/logging/logger_service.dart';
 import 'package:signsync/models/chat_message.dart';
 import 'package:signsync/services/tts_service.dart';
+import 'package:signsync/utils/retry_helper.dart';
 
 /// AI Assistant Service using Google Gemini 2.5 API.
 ///
@@ -15,19 +18,30 @@ class GeminiAiService with ChangeNotifier {
   bool _isInitialized = false;
   bool _isLoading = false;
   String? _error;
-  
+
   // Rate limiting
   final int _maxRequestsPerMinute = 60;
   final List<DateTime> _requestTimestamps = [];
   DateTime? _lastRequestTime;
-  
+
   // Voice integration
   TtsService? _ttsService;
   bool _voiceEnabled = false;
-  
+
   // App state context
   Map<String, dynamic> _appContext = {};
-  
+
+  // Network monitoring
+  final Connectivity _connectivity = Connectivity();
+  bool _isOnline = true;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+
+  // Retry logic
+  final RetryHelper _retryHelper = RetryHelpers.network(
+    maxRetries: 3,
+    timeout: const Duration(seconds: 30),
+  );
+
   // Offline fallback responses
   static const Map<String, String> _fallbackResponses = {
     'hello': "Hello! I'm SignSync AI. I'm here to help you with sign language questions and accessibility features. How can I assist you today?",
@@ -47,6 +61,7 @@ class GeminiAiService with ChangeNotifier {
   String? get error => _error;
   bool get voiceEnabled => _voiceEnabled;
   Map<String, dynamic> get appContext => Map.unmodifiable(_appContext);
+  bool get isOnline => _isOnline;
 
   /// Initializes the Gemini AI service.
   Future<void> initialize({
@@ -60,28 +75,33 @@ class GeminiAiService with ChangeNotifier {
 
     try {
       LoggerService.info('Initializing Gemini AI service');
-      
+
       // Initialize the model with Gemini 2.5
       _model = GenerativeModel(
         model: 'gemini-2.5-pro',
         apiKey: apiKey,
       );
-      
+
       // Create a chat session with context
       _chatSession = _model!.startChat(
         history: [
           Content.text(_buildSystemPrompt()),
         ],
       );
-      
+
       // Set up TTS if provided
       _ttsService = ttsService;
-      
+
+      // Monitor network connectivity
+      _connectivitySubscription = _connectivity.onConnectivityChanged.listen(_onConnectivityChanged);
+      final connectivity = await _connectivity.checkConnectivity();
+      _isOnline = connectivity != ConnectivityResult.none;
+
       _isInitialized = true;
       _error = null;
       notifyListeners();
-      
-      LoggerService.info('Gemini AI service initialized successfully');
+
+      LoggerService.info('Gemini AI service initialized successfully (online: $_isOnline)');
     } catch (e, stack) {
       _error = 'Failed to initialize: $e';
       LoggerService.error('Failed to initialize Gemini AI', error: e, stack: stack);
@@ -151,27 +171,46 @@ Always provide helpful, encouraging responses that are accessible to users with 
       return ChatMessage.error('Please wait before sending another message.');
     }
 
+    // If offline, use offline responses immediately
+    if (!_isOnline) {
+      LoggerService.info('Offline mode, using fallback response');
+      return _getOfflineResponse(message);
+    }
+
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
 
-      // Try online API first
-      ChatMessage response;
-      
-      if (_chatSession != null) {
-        // Use Gemini API
-        final enhancedMessage = _enhanceMessageWithContext(message);
-        final content = Content.text(enhancedMessage);
-        
-        final result = await _chatSession!.sendMessage(content);
-        final text = result.text ?? 'I apologize, but I could not generate a response.';
-        
-        response = ChatMessage.ai(content: text);
-      } else {
-        // Fallback to offline responses
-        response = _getOfflineResponse(message);
-      }
+      // Use retry helper for API call
+      final response = await _retryHelper.execute(
+        () async {
+          if (_chatSession == null) {
+            throw StateError('Chat session not initialized');
+          }
+
+          final enhancedMessage = _enhanceMessageWithContext(message);
+          final content = Content.text(enhancedMessage);
+
+          final result = await _chatSession!.sendMessage(content);
+          final text = result.text ?? 'I apologize, but I could not generate a response.';
+
+          return ChatMessage.ai(content: text);
+        },
+        onError: (error, attempt) {
+          LoggerService.warn('AI message attempt $attempt failed: $error');
+        },
+        shouldRetry: (error) {
+          // Retry on network errors and timeouts
+          return RetryHelpers.isRetryableError(error);
+        },
+        onRetry: (attempt, delay) {
+          LoggerService.info('Retrying AI message (attempt $attempt, delay: ${delay.inMilliseconds}ms)');
+        },
+        onMaxRetriesReached: (error) {
+          LoggerService.error('Max retries reached for AI message, falling back to offline response: $error');
+        },
+      );
 
       _isLoading = false;
       _lastRequestTime = DateTime.now();
@@ -187,9 +226,9 @@ Always provide helpful, encouraging responses that are accessible to users with 
       _error = 'Failed to send message: $e';
       _isLoading = false;
       notifyListeners();
-      
+
       LoggerService.error('Failed to send message to AI', error: e, stack: stack);
-      
+
       // Fall back to offline response
       return _getOfflineResponse(message);
     }
@@ -321,9 +360,35 @@ Always provide helpful, encouraging responses that are accessible to users with 
     return transcript;
   }
 
+  /// Handles network connectivity changes.
+  void _onConnectivityChanged(List<ConnectivityResult> results) {
+    final wasOnline = _isOnline;
+    _isOnline = results.any((result) => result != ConnectivityResult.none);
+
+    if (wasOnline && !_isOnline) {
+      LoggerService.warn('Network lost, switching to offline mode');
+      _error = 'Network connection lost. Using offline mode.';
+      notifyListeners();
+    } else if (!wasOnline && _isOnline) {
+      LoggerService.info('Network restored, switching to online mode');
+      _error = null;
+      notifyListeners();
+    }
+  }
+
+  /// Checks if currently online.
+  Future<bool> checkConnectivity() async {
+    final connectivity = await _connectivity.checkConnectivity();
+    _isOnline = connectivity != ConnectivityResult.none;
+    return _isOnline;
+  }
+
   /// Disposes the service and releases resources.
   @override
   void dispose() {
+    _connectivitySubscription?.cancel();
+    _connectivitySubscription = null;
+    _retryHelper.dispose();
     _chatSession = null;
     _model = null;
     _isInitialized = false;

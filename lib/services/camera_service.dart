@@ -8,6 +8,8 @@ import 'package:signsync/core/error/exceptions.dart';
 import 'package:signsync/core/logging/logger_service.dart';
 import 'package:signsync/models/camera_state.dart';
 import 'package:signsync/services/permissions_service.dart';
+import 'package:signsync/utils/memory_monitor.dart';
+import 'package:signsync/utils/retry_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Service for managing camera functionality with comprehensive lifecycle management.
@@ -47,6 +49,18 @@ class CameraService with ChangeNotifier {
   // Lifecycle handling
   bool _isAppInBackground = false;
 
+  // Low-light handling
+  bool _lowLightDetected = false;
+  double _currentExposure = 0.0;
+  final List<double> _brightnessHistory = [];
+  static const double _lowLightThreshold = 30.0; // Average pixel brightness below this is low light
+  static const int _brightnessCheckInterval = 30; // Check every 30 frames
+
+  // Memory-aware mode
+  bool _memoryOptimizationEnabled = false;
+  final MemoryMonitor _memoryMonitor = MemoryMonitor();
+  ResolutionPreset _cachedResolution = ResolutionPreset.medium;
+
   // Getters
   CameraController? get controller => _controller;
   CameraDescription? get selectedCamera => _selectedCamera;
@@ -59,6 +73,9 @@ class CameraService with ChangeNotifier {
   double get currentFps => _currentFps;
   bool get hasFlash => _controller?.value.flashMode != null;
   bool get isFlashOn => _isFlashOn;
+  bool get lowLightDetected => _lowLightDetected;
+  double get currentExposure => _currentExposure;
+  bool get memoryOptimizationEnabled => _memoryOptimizationEnabled;
 
   /// Creates a new CameraService instance.
   CameraService({PermissionsService? permissionsService})
@@ -77,6 +94,20 @@ class CameraService with ChangeNotifier {
       _setState(CameraState.initializing);
       _error = null;
       _retryCount = 0;
+
+      // Initialize memory monitor
+      await _memoryMonitor.initialize();
+
+      // Set up memory callbacks
+      _memoryMonitor.addMemoryCriticalCallback(_handleLowMemory);
+      _memoryMonitor.addMemoryWarningCallback(_handleMemoryWarning);
+
+      // Check if low-RAM device
+      if (_memoryMonitor.isLowRamDevice) {
+        LoggerService.info('Low-RAM device detected, enabling memory optimization');
+        _memoryOptimizationEnabled = true;
+        _cachedResolution = ResolutionPreset.low;
+      }
 
       // Load camera preferences
       await _loadCameraPreferences();
@@ -127,7 +158,7 @@ class CameraService with ChangeNotifier {
   /// [resolution] - The desired image resolution.
   /// [enableAudio] - Whether to enable audio streaming.
   Future<void> startCamera({
-    ResolutionPreset resolution = ResolutionPreset.medium,
+    ResolutionPreset? resolution,
     bool enableAudio = false,
   }) async {
     if (!_cameraEnabled) {
@@ -139,6 +170,9 @@ class CameraService with ChangeNotifier {
       LoggerService.info('Camera already streaming');
       return;
     }
+
+    // Use cached resolution for memory optimization if not specified
+    final actualResolution = resolution ?? _cachedResolution;
 
     try {
       _setState(CameraState.starting);
@@ -162,17 +196,22 @@ class CameraService with ChangeNotifier {
         }
       });
 
-      LoggerService.info('Starting camera with resolution: $resolution');
+      LoggerService.info('Starting camera with resolution: $actualResolution (memory optimized: $_memoryOptimizationEnabled)');
 
       _controller = CameraController(
         _selectedCamera!,
-        resolution,
+        actualResolution,
         enableAudio: enableAudio,
         imageFormatGroup: ImageFormatGroup.yuv420,
       );
 
       await _controller!.initialize();
       await _controller!.setFlashMode(_isFlashOn ? FlashMode.torch : FlashMode.off);
+
+      // Adjust for low-light conditions if needed
+      if (_lowLightDetected) {
+        await _adjustForLowLight();
+      }
 
       _setState(CameraState.ready);
       _initTimeout?.cancel();
@@ -191,7 +230,7 @@ class CameraService with ChangeNotifier {
   /// [resolution] - The resolution for inference frames.
   Future<void> startStreaming({
     required void Function(CameraImage image) onFrame,
-    ResolutionPreset resolution = ResolutionPreset.low,
+    ResolutionPreset? resolution,
   }) async {
     if (!_cameraEnabled) {
       LoggerService.warn('Camera is disabled, cannot start streaming');
@@ -214,10 +253,17 @@ class CameraService with ChangeNotifier {
       _frameCount = 0;
       _lastFpsUpdate = DateTime.now();
       _currentFps = 0.0;
+      _brightnessHistory.clear();
 
       await _controller!.startImageStream((image) {
         _frameCount++;
         _updateFps();
+
+        // Check low-light conditions periodically
+        if (_frameCount % _brightnessCheckInterval == 0) {
+          _checkLightingConditions(image);
+        }
+
         onFrame(image);
       });
 
@@ -411,6 +457,8 @@ class CameraService with ChangeNotifier {
     LoggerService.info('Disposing camera service');
     _initTimeout?.cancel();
     _retryTimer?.cancel();
+    _memoryMonitor.clearCallbacks();
+    _memoryMonitor.stopMonitoring();
     await _disposeController();
     _cameraEnabled = true;
     _setState(CameraState.disposed);
@@ -562,6 +610,156 @@ class CameraService with ChangeNotifier {
       });
     } else {
       _retryCount = 0;
+    }
+  }
+
+  /// Checks lighting conditions from camera frame.
+  void _checkLightingConditions(CameraImage image) {
+    try {
+      // Calculate average brightness from Y-plane (luminance)
+      final yPlane = image.planes[0].bytes;
+      final stride = image.planes[0].bytesPerRow;
+
+      // Sample pixels for performance (every 100th pixel)
+      var totalBrightness = 0;
+      var sampleCount = 0;
+
+      for (var i = 0; i < yPlane.length; i += 100) {
+        if (i % stride < image.width) {
+          totalBrightness += yPlane[i];
+          sampleCount++;
+        }
+      }
+
+      if (sampleCount > 0) {
+        final avgBrightness = totalBrightness / sampleCount;
+        _brightnessHistory.add(avgBrightness);
+
+        // Keep history limited
+        if (_brightnessHistory.length > 10) {
+          _brightnessHistory.removeAt(0);
+        }
+
+        // Calculate moving average
+        final movingAvg = _brightnessHistory.reduce((a, b) => a + b) / _brightnessHistory.length;
+
+        // Check if low light
+        final wasLowLight = _lowLightDetected;
+        _lowLightDetected = movingAvg < _lowLightThreshold;
+
+        if (_lowLightDetected && !wasLowLight) {
+          LoggerService.warn('Low light conditions detected (brightness: ${movingAvg.toStringAsFixed(1)})');
+          _onLowLightDetected();
+        } else if (!_lowLightDetected && wasLowLight) {
+          LoggerService.info('Lighting conditions improved');
+          _onLightingImproved();
+        }
+      }
+    } catch (e) {
+      LoggerService.warn('Failed to check lighting conditions: $e');
+    }
+  }
+
+  /// Called when low light is detected.
+  Future<void> _onLowLightDetected() async {
+    try {
+      if (_controller == null || !_controller!.value.isInitialized) return;
+
+      // Enable flash/torch if available
+      if (hasFlash) {
+        await toggleFlash();
+        LoggerService.info('Flash enabled for low light conditions');
+      }
+
+      // Increase exposure if supported
+      await _adjustExposure(0.5);
+    } catch (e) {
+      LoggerService.warn('Failed to adjust for low light: $e');
+    }
+  }
+
+  /// Called when lighting conditions improve.
+  Future<void> _onLightingImproved() async {
+    try {
+      if (_controller == null || !_controller!.value.isInitialized) return;
+
+      // Turn off flash if it was auto-enabled
+      if (_isFlashOn) {
+        await toggleFlash();
+        LoggerService.info('Flash disabled for improved lighting');
+      }
+
+      // Reset exposure
+      await _adjustExposure(0.0);
+    } catch (e) {
+      LoggerService.warn('Failed to reset lighting adjustments: $e');
+    }
+  }
+
+  /// Adjusts camera exposure offset.
+  Future<void> _adjustExposure(double offset) async {
+    if (_controller == null || !_controller!.value.isInitialized) return;
+
+    try {
+      final minExposure = _controller!.value.getMinExposureOffset();
+      final maxExposure = _controller!.value.getMaxExposureOffset();
+
+      if (minExposure == 0.0 && maxExposure == 0.0) {
+        LoggerService.debug('Exposure adjustment not supported');
+        return;
+      }
+
+      final clampedOffset = offset.clamp(minExposure, maxExposure);
+      await _controller!.setExposureOffset(clampedOffset);
+      _currentExposure = clampedOffset;
+
+      LoggerService.debug('Exposure adjusted to $clampedOffset');
+    } catch (e) {
+      LoggerService.warn('Failed to adjust exposure: $e');
+    }
+  }
+
+  /// Adjusts camera settings for low light conditions.
+  Future<void> _adjustForLowLight() async {
+    if (_controller == null || !_controller!.value.isInitialized) return;
+
+    try {
+      // Increase exposure
+      await _adjustExposure(0.5);
+
+      LoggerService.info('Camera adjusted for low light conditions');
+    } catch (e) {
+      LoggerService.warn('Failed to adjust camera for low light: $e');
+    }
+  }
+
+  /// Handles low memory conditions.
+  void _handleLowMemory() {
+    LoggerService.warn('Low memory detected, optimizing camera');
+
+    // Reduce resolution
+    if (_cachedResolution.index > ResolutionPreset.low.index) {
+      _cachedResolution = ResolutionPreset.low;
+
+      // Restart camera with lower resolution if streaming
+      if (_state == CameraState.streaming) {
+        stopStreaming().then((_) => startCamera());
+      }
+
+      LoggerService.info('Camera resolution reduced to conserve memory');
+    }
+  }
+
+  /// Handles memory warning conditions.
+  void _handleMemoryWarning() {
+    LoggerService.info('Memory warning, preparing for optimization');
+
+    // Clean up resources
+    _brightnessHistory.clear();
+
+    // Reduce FPS target by stopping/starting
+    if (_state == CameraState.streaming) {
+      stopStreaming().then((_) => startCamera());
     }
   }
 }

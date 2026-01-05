@@ -5,6 +5,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:signsync/core/error/exceptions.dart';
 import 'package:signsync/core/logging/logger_service.dart';
 import 'package:signsync/models/detected_object.dart';
+import 'package:signsync/utils/retry_helper.dart';
 
 /// Service for text-to-speech audio alerts for object detection.
 ///
@@ -16,6 +17,12 @@ class TtsService with ChangeNotifier {
   bool _isSpeaking = false;
   String? _error;
   String? _currentLanguage;
+
+  // Retry logic
+  final RetryHelper _retryHelper = RetryHelpers.tts(
+    maxRetries: 2,
+    timeout: const Duration(seconds: 5),
+  );
 
   // Queue management for alerts
   final Queue<AudioAlert> _alertQueue = Queue<AudioAlert>();
@@ -160,7 +167,27 @@ class TtsService with ChangeNotifier {
       notifyListeners();
 
       final stopwatch = Stopwatch()..start();
-      await _flutterTts!.speak(text);
+
+      // Use retry logic for TTS
+      await _retryHelper.execute(
+        () async {
+          if (_flutterTts == null) {
+            throw TtsException('TTS engine not available');
+          }
+          await _flutterTts!.speak(text);
+        },
+        onError: (error, attempt) {
+          LoggerService.warn('TTS attempt $attempt failed: $error');
+        },
+        shouldRetry: (error) {
+          // Retry on TTS errors that might be temporary
+          return RetryHelpers.isRetryableError(error);
+        },
+        onMaxRetriesReached: (error) {
+          LoggerService.error('Max TTS retries reached: $error');
+        },
+      );
+
       stopwatch.stop();
 
       _speechDurations.add(stopwatch.elapsedMilliseconds.toDouble());
@@ -174,7 +201,8 @@ class TtsService with ChangeNotifier {
       LoggerService.error('Failed to speak', error: e, stack: stack);
       _isSpeaking = false;
       notifyListeners();
-      rethrow;
+      // Don't rethrow - TTS failures shouldn't crash the app
+      _onSpeechComplete();
     }
   }
 
@@ -535,6 +563,7 @@ class TtsService with ChangeNotifier {
   Future<void> dispose() async {
     LoggerService.info('Disposing TTS service');
 
+    _retryHelper.dispose();
     _queueProcessingTimer?.cancel();
     _queueProcessingTimer = null;
 
