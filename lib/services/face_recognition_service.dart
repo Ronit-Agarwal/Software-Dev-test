@@ -85,9 +85,23 @@ class FaceRecognitionService with ChangeNotifier {
   }
 
   /// Processes a frame for identification or enrollment.
-  Future<FaceResult?> processFrame(CameraImage image, {Rect? faceRect}) async {
+  Future<FaceResult?> processFrame(CameraImage image, {Rect? faceRect, List<Rect>? allFaces}) async {
     if (!_isModelLoaded || !_recognitionEnabled) return null;
     if (_isProcessing) return null;
+
+    // Check for multiple faces - handle the first one with highest confidence
+    if (allFaces != null && allFaces.length > 1) {
+      LoggerService.info('Multiple faces detected (${allFaces.length}), processing first face');
+    }
+
+    // Check lighting conditions using Y-plane brightness
+    if (faceRect != null) {
+      final brightness = _calculateBrightness(image, faceRect);
+      if (brightness < 50.0) {
+        LoggerService.warn('Poor lighting conditions detected for face recognition (brightness: $brightness)');
+        // Could return null or use a lower confidence threshold
+      }
+    }
 
     _isProcessing = true;
     try {
@@ -106,6 +120,38 @@ class FaceRecognitionService with ChangeNotifier {
       }
     } finally {
       _isProcessing = false;
+    }
+  }
+
+  /// Calculates brightness from camera frame for face region.
+  double _calculateBrightness(CameraImage image, Rect faceRect) {
+    try {
+      final yPlane = image.planes[0].bytes;
+      final stride = image.planes[0].bytesPerRow;
+      
+      // Sample pixels in the face region
+      var totalBrightness = 0;
+      var sampleCount = 0;
+      
+      final startX = (faceRect.left * image.width).toInt().clamp(0, image.width - 1);
+      final startY = (faceRect.top * image.height).toInt().clamp(0, image.height - 1);
+      final endX = (faceRect.right * image.width).toInt().clamp(0, image.width - 1);
+      final endY = (faceRect.bottom * image.height).toInt().clamp(0, image.height - 1);
+      
+      for (var y = startY; y < endY; y += 10) {
+        for (var x = startX; x < endX; x += 10) {
+          final idx = y * stride + x;
+          if (idx < yPlane.length) {
+            totalBrightness += yPlane[idx];
+            sampleCount++;
+          }
+        }
+      }
+      
+      return sampleCount > 0 ? totalBrightness / sampleCount : 0.0;
+    } catch (e) {
+      LoggerService.warn('Failed to calculate brightness: $e');
+      return 0.0;
     }
   }
 

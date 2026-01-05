@@ -173,13 +173,22 @@ class CnnInferenceService with ChangeNotifier {
     try {
       LoggerService.debug('Loading CNN model from $modelPath');
       
+      // Add timeout to prevent hanging on slow devices
       _interpreter = await Interpreter.fromAsset(
         modelPath,
         options: InterpreterOptions()..threads = 4,
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw TimeoutException('Model loading timeout after 30 seconds');
+        },
       );
       
       LoggerService.info('CNN model loaded successfully');
       _validateModel();
+    } on TimeoutException catch (e, stack) {
+      LoggerService.error('CNN model loading timed out', error: e, stack: stack);
+      throw ModelLoadException('CNN model loading timed out: $e');
     } catch (e, stack) {
       LoggerService.error('Failed to load CNN model', error: e, stack: stack);
       throw ModelLoadException('Failed to load CNN model: $e');
@@ -706,4 +715,21 @@ Float32List _imageToFloat32List(img.Image image) {
   }
   
   return result;
+}
+
+/// Disposes the CNN service and releases resources.
+@override
+void dispose() {
+  LoggerService.info('Disposing CNN inference service');
+  _retryHelper.dispose();
+  _interpreter?.close();
+  _interpreter = null;
+  _isModelLoaded = false;
+  _signHistory.clear();
+  _confidenceHistory.clear();
+  _fpsHistory.clear();
+  _inferenceTimes.clear();
+  _temporalBuffer.clear();
+  _signConfidenceHistory.clear();
+  super.dispose();
 }
