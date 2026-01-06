@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math';
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
@@ -45,10 +46,19 @@ class CnnInferenceService with ChangeNotifier {
   String? _cachedModelPath;
   bool _lazyLoadEnabled = true;
 
+  // Model loading timeout
+  Timer? _modelLoadingTimeout;
+  static const Duration _modelLoadTimeout = Duration(seconds: 10);
+
+  // Corrupted frame handling
+  int _corruptedFrameCount = 0;
+  static const int _maxCorruptedFrames = 10;
+
   // Performance monitoring
   final List<double> _inferenceTimes = [];
   final List<double> _confidenceHistory = [];
   int _framesProcessed = 0;
+  int _framesSkipped = 0; // Track skipped frames (corrupted)
   final List<double> _fpsHistory = [];
   DateTime? _lastFrameTime;
 
@@ -152,15 +162,48 @@ class CnnInferenceService with ChangeNotifier {
 
       final modelPath = _cachedModelPath ?? 'assets/models/asl_cnn.tflite';
 
+      // Set up loading timeout
+      _modelLoadingTimeout?.cancel();
+      _modelLoadingTimeout = Timer(_modelLoadTimeout, () {
+        if (_isInitializing && !_isModelLoaded) {
+          LoggerService.error('CNN model loading timed out after ${_modelLoadTimeout.inSeconds}s');
+          _isInitializing = false;
+          _error = 'Model loading timed out. Please try again.';
+          throw ModelLoadException(
+            'CNN model loading timed out after ${_modelLoadTimeout.inSeconds}s',
+            modelPath: modelPath,
+            modelType: 'ResNet-50',
+          );
+        }
+      });
+
       // Load the model with optimized settings
       await _loadModel(modelPath);
+
+      // Cancel timeout on success
+      _modelLoadingTimeout?.cancel();
+      _modelLoadingTimeout = null;
 
       _isModelLoaded = true;
       _resetState();
       LoggerService.info('CNN inference service initialized successfully');
     } catch (e, stack) {
+      _modelLoadingTimeout?.cancel();
+      _modelLoadingTimeout = null;
+
       _error = 'Failed to initialize CNN service: $e';
       LoggerService.error('CNN initialization failed', error: e, stack: stack);
+
+      // Convert to ModelLoadException if it's not already
+      if (e is! ModelLoadException) {
+        throw ModelLoadException(
+          'Failed to load CNN model: $e',
+          modelPath: _cachedModelPath ?? 'assets/models/asl_cnn.tflite',
+          modelType: 'ResNet-50',
+          originalError: e,
+          stackTrace: stack,
+        );
+      }
       rethrow;
     } finally {
       _isInitializing = false;
@@ -172,17 +215,50 @@ class CnnInferenceService with ChangeNotifier {
   Future<void> _loadModel(String modelPath) async {
     try {
       LoggerService.debug('Loading CNN model from $modelPath');
-      
+
+      // Validate model file exists and has correct extension
+      if (!modelPath.endsWith('.tflite') && !modelPath.endsWith('.tfl')) {
+        throw ModelLoadException(
+          'Invalid model file format. Expected .tflite or .tfl file',
+          modelPath: modelPath,
+          modelType: 'ResNet-50',
+        );
+      }
+
       _interpreter = await Interpreter.fromAsset(
         modelPath,
         options: InterpreterOptions()..threads = 4,
       );
-      
+
       LoggerService.info('CNN model loaded successfully');
       _validateModel();
+    } on FileSystemException catch (e, stack) {
+      LoggerService.error('Model file not found', error: e, stack: stack);
+      throw ModelLoadException(
+        'Model file not found at $modelPath. Please ensure the model file is included in assets.',
+        modelPath: modelPath,
+        modelType: 'ResNet-50',
+        originalError: e,
+        stackTrace: stack,
+      );
+    } on FormatException catch (e, stack) {
+      LoggerService.error('Invalid model format', error: e, stack: stack);
+      throw ModelLoadException(
+        'Invalid TFLite model format. The file may be corrupted or incompatible.',
+        modelPath: modelPath,
+        modelType: 'ResNet-50',
+        originalError: e,
+        stackTrace: stack,
+      );
     } catch (e, stack) {
       LoggerService.error('Failed to load CNN model', error: e, stack: stack);
-      throw ModelLoadException('Failed to load CNN model: $e');
+      throw ModelLoadException(
+        'Failed to load CNN model: $e',
+        modelPath: modelPath,
+        modelType: 'ResNet-50',
+        originalError: e,
+        stackTrace: stack,
+      );
     }
   }
 
@@ -231,6 +307,27 @@ class CnnInferenceService with ChangeNotifier {
     if (_isProcessing) {
       LoggerService.debug('CNN inference already in progress, skipping frame');
       return null;
+    }
+
+    // Check for corrupted frame
+    if (_isCorruptedFrame(image)) {
+      _corruptedFrameCount++;
+      _framesSkipped++;
+
+      LoggerService.warn('Corrupted frame detected (count: $_corruptedFrameCount/$_maxCorruptedFrames)');
+
+      if (_corruptedFrameCount >= _maxCorruptedFrames) {
+        LoggerService.error('Too many corrupted frames detected');
+        _error = 'Camera feed appears corrupted. Please restart the camera.';
+        throw MlInferenceException('Camera feed appears corrupted');
+      }
+
+      return null; // Skip corrupted frame
+    } else {
+      // Reset corrupted counter on valid frame
+      if (_corruptedFrameCount > 0) {
+        _corruptedFrameCount = 0;
+      }
     }
 
     _isProcessing = true;
@@ -313,6 +410,41 @@ class CnnInferenceService with ChangeNotifier {
       _isProcessing = false;
       notifyListeners();
     }
+  }
+
+  /// Checks if a camera frame is corrupted.
+  bool _isCorruptedFrame(CameraImage image) {
+    // Check for null or invalid dimensions
+    if (image == null || image.width <= 0 || image.height <= 0) {
+      return true;
+    }
+
+    // Check for missing planes
+    if (image.planes == null || image.planes.isEmpty) {
+      return true;
+    }
+
+    // Check each plane for valid data
+    for (final plane in image.planes) {
+      if (plane == null || plane.bytes == null || plane.bytes.isEmpty) {
+        return true;
+      }
+
+      // Check for all-zero planes (completely black frames)
+      bool allZeros = true;
+      for (int i = 0; i < plane.bytes.length && i < 100; i++) {
+        if (plane.bytes[i] != 0) {
+          allZeros = false;
+          break;
+        }
+      }
+      if (allZeros && plane.bytes.length > 100) {
+        LoggerService.warn('Detected all-zero plane in frame');
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /// Calculates current FPS for performance monitoring.
@@ -560,6 +692,8 @@ class CnnInferenceService with ChangeNotifier {
   @override
   void dispose() {
     LoggerService.info('Disposing CNN inference service');
+    _modelLoadingTimeout?.cancel();
+    _modelLoadingTimeout = null;
     _interpreter?.close();
     _interpreter = null;
     super.dispose();

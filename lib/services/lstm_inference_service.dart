@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:signsync/core/error/exceptions.dart';
 import 'package:signsync/core/logging/logger_service.dart';
 import 'package:signsync/models/asl_sign.dart';
 import 'package:signsync/services/cnn_inference_service.dart';
+import 'package:signsync/utils/retry_helper.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 
 /// LSTM-based temporal ASL recognition service.
@@ -14,6 +16,7 @@ import 'package:tflite_flutter/tflite_flutter.dart';
 class LstmInferenceService with ChangeNotifier {
   Interpreter? _interpreter;
   bool _isModelLoaded = false;
+  bool _isInitializing = false;
   bool _isProcessing = false;
   AslSign? _latestSign;
   final List<AslSign> _dynamicSignHistory = [];
@@ -30,7 +33,7 @@ class LstmInferenceService with ChangeNotifier {
   final List<DateTime> _frameTimestamps = [];
   final List<InferenceResult> _cnnResults = [];
   int _framesProcessed = 0;
-  
+
   // Performance tracking
   final List<double> _inferenceTimes = [];
   final List<double> _sequencesProcessed = [];
@@ -39,6 +42,16 @@ class LstmInferenceService with ChangeNotifier {
   final Map<String, int> _signCounter = {};
   static const int minSignFrames = 5; // minimum frames to consider a sign
   static const int maxSignGap = 30; // frames before resetting counter
+
+  // Model loading timeout
+  Timer? _modelLoadingTimeout;
+  static const Duration _modelLoadTimeout = Duration(seconds: 10);
+
+  // Retry logic for inference failures
+  final RetryHelper _retryHelper = RetryHelpers.mlInference(
+    maxRetries: 2,
+    timeout: const Duration(milliseconds: 500),
+  );
 
   // Dynamic signs dictionary
   static const List<String> _dynamicSigns = [
@@ -69,6 +82,7 @@ class LstmInferenceService with ChangeNotifier {
 
   // Getters
   bool get isModelLoaded => _isModelLoaded;
+  bool get isInitializing => _isInitializing;
   bool get isProcessing => _isProcessing;
   AslSign? get latestSign => _latestSign;
   String? get error => _error;
@@ -95,14 +109,31 @@ class LstmInferenceService with ChangeNotifier {
         await _cnnService.initialize(modelPath: cnnModelPath);
       }
 
-      // Load LSTM model
-      await _loadLstmModel(lstmModelPath);
-      
+      // Load LSTM model with timeout
+      _isInitializing = true;
+      final loadFuture = _loadLstmModel(modelPath);
+
+      // Set up loading timeout
+      final timeoutFuture = Future.delayed(_modelLoadTimeout).then((_) {
+        throw ModelLoadException(
+          'LSTM model loading timed out after ${_modelLoadTimeout.inSeconds}s',
+          modelPath: modelPath,
+          modelType: 'LSTM',
+        );
+      });
+
+      // Race the load against timeout
+      await Future.any([loadFuture, timeoutFuture]);
+      _modelLoadingTimeout?.cancel();
+      _modelLoadingTimeout = null;
+
       _isModelLoaded = true;
+      _isInitializing = false;
       _resetState();
       notifyListeners();
       LoggerService.info('LSTM inference service initialized successfully');
     } catch (e, stack) {
+      _isInitializing = false;
       _error = 'Failed to initialize LSTM service: $e';
       LoggerService.error('LSTM initialization failed', error: e, stack: stack);
       rethrow;
@@ -113,26 +144,51 @@ class LstmInferenceService with ChangeNotifier {
   Future<void> _loadLstmModel(String modelPath) async {
     try {
       LoggerService.debug('Loading LSTM model from $modelPath');
-      
+
+      // Validate model file extension
+      if (!modelPath.endsWith('.tflite') && !modelPath.endsWith('.tfl')) {
+        throw ModelLoadException(
+          'Invalid model file format. Expected .tflite or .tfl file',
+          modelPath: modelPath,
+          modelType: 'LSTM',
+        );
+      }
+
       _interpreter = await Interpreter.fromAsset(
         modelPath,
         options: InterpreterOptions()..threads = 2,
       );
-      
+
       LoggerService.info('LSTM model loaded successfully');
       _validateLstmModel();
+    } on FileSystemException catch (e, stack) {
+      LoggerService.error('LSTM model file not found', error: e, stack: stack);
+      throw ModelLoadException(
+        'LSTM model file not found at $modelPath. '
+        'Please ensure you have converted and placed your LSTM model in assets/models/',
+        modelPath: modelPath,
+        modelType: 'LSTM',
+        originalError: e,
+        stackTrace: stack,
+      );
+    } on FormatException catch (e, stack) {
+      LoggerService.error('Invalid LSTM model format', error: e, stack: stack);
+      throw ModelLoadException(
+        'Invalid TFLite model format. The file may be corrupted or incompatible.',
+        modelPath: modelPath,
+        modelType: 'LSTM',
+        originalError: e,
+        stackTrace: stack,
+      );
     } catch (e, stack) {
       LoggerService.error('Failed to load LSTM model', error: e, stack: stack);
-      
-      // Provide helpful error messages
-      if (e.toString().contains('AssetNotFoundException')) {
-        throw ModelLoadException(
-          'LSTM model file not found at $modelPath. '
-          'Please ensure you have converted and placed your LSTM model in assets/models/'
-        );
-      }
-      
-      throw ModelLoadException('Failed to load LSTM model: $e');
+      throw ModelLoadException(
+        'Failed to load LSTM model: $e',
+        modelPath: modelPath,
+        modelType: 'LSTM',
+        originalError: e,
+        stackTrace: stack,
+      );
     }
   }
 
@@ -521,6 +577,8 @@ class LstmInferenceService with ChangeNotifier {
   @override
   void dispose() {
     LoggerService.info('Disposing LSTM inference service');
+    _modelLoadingTimeout?.cancel();
+    _modelLoadingTimeout = null;
     _interpreter?.close();
     _interpreter = null;
     _cnnService.dispose();
