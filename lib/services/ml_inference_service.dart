@@ -9,10 +9,29 @@ import 'package:signsync/models/detected_object.dart';
 import 'package:signsync/services/ml_orchestrator_service.dart';
 
 /// Service for ML inference operations.
-///
-/// This service handles loading ML models, processing camera frames,
-/// and returning inference results for ASL detection and object recognition.
-/// It now delegates to the [MlOrchestratorService] for real-time inference.
+ ///
+ /// This service handles loading ML models, processing camera frames,
+ /// and returning inference results for ASL detection and object recognition.
+ /// It now delegates to the [MlOrchestratorService] for real-time inference.
+ ///
+ /// ## Features
+ /// - **Model Management**: Handles CNN, LSTM, and YOLO model loading
+ /// - **Real-time Processing**: Processes camera frames for live inference
+ /// - **Multi-modal Detection**: Supports ASL signs, objects, and temporal sequences
+ /// - **Confidence Filtering**: Filters results based on configurable thresholds
+ /// - **Performance Optimization**: Optimizes for mobile devices with FP16 quantization
+ ///
+ /// ## Usage
+ /// ```dart
+ /// final mlService = MlInferenceService();
+ /// await mlService.initialize(mode: AppMode.translation);
+ /// 
+ /// // Process frame for inference
+ /// final result = await mlService.processFrame(cameraImage);
+ /// if (result != null) {
+ ///   print('Detected: ${result.label} (${result.confidence})');
+ /// }
+ /// ```
 class MlInferenceService with ChangeNotifier {
   final MlOrchestratorService? _orchestrator;
   
