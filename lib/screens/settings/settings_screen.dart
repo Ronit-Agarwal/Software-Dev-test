@@ -1,5 +1,16 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import 'package:signsync/config/app_config.dart';
+import 'package:signsync/config/providers.dart';
+import 'package:signsync/core/logging/logger_service.dart';
+import 'package:signsync/core/theme/colors.dart';
 import 'package:signsync/services/face_recognition_service.dart';
+import 'package:signsync/services/ml_orchestrator_service.dart';
+import 'package:signsync/utils/constants.dart';
 
 /// Settings screen for app configuration.
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -17,14 +28,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   // Face Recognition state
   bool _personRecognitionEnabled = true;
 
+  // Voice settings
+  double _ttsVolume = 0.8;
+  double _ttsSpeechRate = 0.9;
+
   @override
   void initState() {
     super.initState();
     // Initialize with current values from orchestrator
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final orchestrator = ref.read(mlOrchestratorServiceProvider);
+      final ttsService = ref.read(ttsServiceProvider);
+
       setState(() {
         _personRecognitionEnabled = orchestrator.enableFace;
+        _ttsVolume = ttsService.volume;
+        _ttsSpeechRate = ttsService.speechRate;
       });
     });
   }
@@ -200,11 +219,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const Divider(),
 
-          // Language Section
-          _buildSectionHeader('Language'),
-          _buildLanguageSelector(),
-          const Divider(),
-
           // Permissions Section
           _buildSectionHeader('Permissions'),
           _buildPermissionTile(
@@ -236,12 +250,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _buildActionTile(
             title: 'Privacy Policy',
             icon: Icons.privacy_tip,
-            onTap: () {},
+            onTap: () => _openExternalUrl(
+              context,
+              Uri.parse(AppConstants.privacyPolicyUrl),
+            ),
           ),
           _buildActionTile(
             title: 'Terms of Service',
             icon: Icons.description,
-            onTap: () {},
+            onTap: () => _openExternalUrl(
+              context,
+              Uri.parse(AppConstants.termsOfServiceUrl),
+            ),
           ),
           _buildActionTile(
             title: 'Reset Settings',
@@ -296,6 +316,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     required double value,
     required double min,
     required double max,
+    int? divisions,
     required ValueChanged<double> onChanged,
     required IconData icon,
   }) {
@@ -310,6 +331,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             value: value,
             min: min,
             max: max,
+            divisions: divisions,
             onChanged: onChanged,
           ),
         ],
@@ -623,6 +645,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  Future<void> _openExternalUrl(BuildContext context, Uri url) async {
+    try {
+      final launched = await launchUrl(url, mode: LaunchMode.externalApplication);
+      if (!launched && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open link: $url')),
+        );
+      }
+    } catch (e, stack) {
+      LoggerService.warn('Failed to open external URL', error: e, stackTrace: stack, extra: {
+        'url': url.toString(),
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open link: $url')),
+        );
+      }
+    }
+  }
+
   void _showPermissionDetails(BuildContext context, String permission) {
     showDialog(
       context: context,
@@ -640,9 +682,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           if (permission == 'camera' || permission == 'microphone')
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.pop(context);
-                // Open app settings
+                final opened = await openAppSettings();
+                if (!opened && mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Could not open system settings')),
+                  );
+                }
               },
               child: const Text('Open Settings'),
             ),

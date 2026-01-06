@@ -36,10 +36,9 @@ xcuserdata/
 # Android
 local.properties
 .gradle/
-*.gradle
 /captures/
 .output/
-android/app/src/main/kotlin/
+android/key.properties
 
 # iOS
 /ios/Pods/

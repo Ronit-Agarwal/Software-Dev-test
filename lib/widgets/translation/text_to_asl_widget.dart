@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+
 import '../../config/providers.dart';
+import '../../core/logging/logger_service.dart';
+import '../../core/theme/colors.dart';
 import '../../models/asl_sign.dart';
 import '../../utils/constants.dart';
-import '../../core/theme/colors.dart';
 import 'asl_sequence_player.dart';
 
 /// Widget for English-to-ASL translation.
@@ -59,9 +61,9 @@ class _TextToAslWidgetState extends ConsumerState<TextToAslWidget> {
 
   Future<void> _toggleListening() async {
     if (!_isListening) {
-      bool available = await _speech.initialize(
-        onStatus: (status) => debugPrint('Speech status: $status'),
-        onError: (error) => debugPrint('Speech error: $error'),
+      final available = await _speech.initialize(
+        onStatus: (status) => LoggerService.debug('Speech status: $status'),
+        onError: (error) => LoggerService.warn('Speech error: $error'),
       );
       
       if (available) {

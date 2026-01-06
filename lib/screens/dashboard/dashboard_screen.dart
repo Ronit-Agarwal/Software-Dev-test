@@ -1,4 +1,16 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+
+import 'package:signsync/config/providers.dart';
+import 'package:signsync/core/theme/colors.dart';
+import 'package:signsync/models/app_mode.dart';
+import 'package:signsync/utils/constants.dart';
+import 'package:signsync/widgets/common/bottom_nav_bar.dart';
+import 'package:signsync/widgets/dashboard/health_indicator_widget.dart';
+import 'package:signsync/widgets/dashboard/mode_toggle_widget.dart';
+import 'package:signsync/widgets/dashboard/performance_stats_widget.dart';
+import 'package:signsync/widgets/dashboard/quick_action_button.dart';
 
 /// Dashboard screen with mode switching and real-time stats.
 class DashboardScreen extends ConsumerWidget {

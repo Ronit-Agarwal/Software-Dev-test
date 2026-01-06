@@ -1,0 +1,12 @@
+include ':app'
+
+// Flutter tool will inject its Gradle plugin loader via local.properties.
+def localPropertiesFile = new File(rootProject.projectDir, 'local.properties')
+if (localPropertiesFile.exists()) {
+    def properties = new Properties()
+    localPropertiesFile.withReader('UTF-8') { reader -> properties.load(reader) }
+    def flutterSdkPath = properties.getProperty('flutter.sdk')
+    if (flutterSdkPath != null) {
+        apply from: "${flutterSdkPath}/packages/flutter_tools/gradle/app_plugin_loader.gradle"
+    }
+}
