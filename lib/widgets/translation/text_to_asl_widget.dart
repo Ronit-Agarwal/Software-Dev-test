@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../../config/providers.dart';
 import '../../models/asl_sign.dart';
 import '../../utils/constants.dart';
@@ -19,7 +18,6 @@ class TextToAslWidget extends ConsumerStatefulWidget {
 
 class _TextToAslWidgetState extends ConsumerState<TextToAslWidget> {
   final TextEditingController _textController = TextEditingController();
-  final stt.SpeechToText _speech = stt.SpeechToText();
   
   bool _isListening = false;
   List<AslSign> _sequence = [];
@@ -57,33 +55,6 @@ class _TextToAslWidgetState extends ConsumerState<TextToAslWidget> {
     }
   }
 
-  Future<void> _toggleListening() async {
-    if (!_isListening) {
-      bool available = await _speech.initialize(
-        onStatus: (status) => debugPrint('Speech status: $status'),
-        onError: (error) => debugPrint('Speech error: $error'),
-      );
-      
-      if (available) {
-        setState(() => _isListening = true);
-        _speech.listen(
-          onResult: (result) {
-            setState(() {
-              _textController.text = result.recognizedWords;
-              if (result.finalResult) {
-                _isListening = false;
-                _translate();
-              }
-            });
-          },
-        );
-      }
-    } else {
-      setState(() => _isListening = false);
-      _speech.stop();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -110,12 +81,6 @@ class _TextToAslWidgetState extends ConsumerState<TextToAslWidget> {
                   ),
                   onSubmitted: (_) => _translate(),
                 ),
-              ),
-              const SizedBox(width: AppConstants.spacingSm),
-              IconButton.filled(
-                onPressed: _toggleListening,
-                icon: Icon(_isListening ? Icons.mic : Icons.mic_none),
-                backgroundColor: _isListening ? AppColors.error : AppColors.primary,
               ),
               const SizedBox(width: AppConstants.spacingSm),
               IconButton.filled(
