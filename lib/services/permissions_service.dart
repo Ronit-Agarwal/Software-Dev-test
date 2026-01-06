@@ -16,6 +16,11 @@ class PermissionsService {
   PermissionStatus _photoLibraryStatus = PermissionStatus.denied;
   PermissionStatus _notificationStatus = PermissionStatus.denied;
 
+  // Retry tracking
+  int _cameraRequestCount = 0;
+  int _microphoneRequestCount = 0;
+  static const int _maxRetryAttempts = 3;
+
   PermissionsService([this._storageService]);
 
   // Getters for permission statuses
@@ -23,6 +28,8 @@ class PermissionsService {
   PermissionStatus get microphoneStatus => _microphoneStatus;
   PermissionStatus get photoLibraryStatus => _photoLibraryStatus;
   PermissionStatus get notificationStatus => _notificationStatus;
+  int get cameraRequestCount => _cameraRequestCount;
+  int get microphoneRequestCount => _microphoneRequestCount;
 
   /// Returns the overall permission status based on critical permissions.
   PermissionStatus get overallStatus {
@@ -73,7 +80,8 @@ class PermissionsService {
   /// Throws [PermissionException] if permission is permanently denied.
   Future<bool> requestCameraPermission() async {
     try {
-      LoggerService.info('Requesting camera permission');
+      _cameraRequestCount++;
+      LoggerService.info('Requesting camera permission (attempt $_cameraRequestCount/$_maxRetryAttempts)');
       final status = await Permission.camera.request();
       _cameraStatus = status;
 
@@ -83,11 +91,18 @@ class PermissionsService {
 
       if (status.isGranted) {
         LoggerService.info('Camera permission granted');
+        _cameraRequestCount = 0; // Reset counter on success
         return true;
       } else if (status.isPermanentlyDenied) {
         LoggerService.warn('Camera permission permanently denied');
-        throw const PermissionException(
-          'Camera permission is required for this feature. Please enable it in app settings.',
+        throw PermissionException(
+          _getPermanentlyDeniedMessage('camera'),
+          permissionType: 'camera',
+        );
+      } else if (status.isDenied && _cameraRequestCount >= _maxRetryAttempts) {
+        LoggerService.warn('Camera permission denied after $_maxRetryAttempts attempts');
+        throw PermissionException(
+          _getRetryExceededMessage('camera'),
           permissionType: 'camera',
         );
       } else {
@@ -96,7 +111,12 @@ class PermissionsService {
       }
     } on PlatformException catch (e, stack) {
       LoggerService.error('Platform error requesting camera permission', error: e, stack: stack);
-      throw const PermissionException('Failed to request camera permission');
+      throw PermissionException(
+        _getPlatformErrorMessage('camera'),
+        permissionType: 'camera',
+        originalError: e,
+        stackTrace: stack,
+      );
     }
   }
 
@@ -227,6 +247,54 @@ class PermissionsService {
   /// Checks if the app should show permission rationale.
   Future<bool> shouldShowRationale(Permission permission) async {
     return await permission.shouldShowRequestRationale;
+  }
+
+  /// Resets retry counters.
+  void resetRetryCounters() {
+    _cameraRequestCount = 0;
+    _microphoneRequestCount = 0;
+    LoggerService.debug('Permission retry counters reset');
+  }
+
+  /// Gets a user-friendly message for permanently denied permissions.
+  String _getPermanentlyDeniedMessage(String permissionType) {
+    switch (permissionType.toLowerCase()) {
+      case 'camera':
+        return 'Camera access was permanently denied. To enable it, go to Settings > SignSync > Camera and toggle it on.';
+      case 'microphone':
+        return 'Microphone access was permanently denied. To enable it, go to Settings > SignSync > Microphone and toggle it on.';
+      default:
+        return '$permissionType permission was permanently denied. Please enable it in app settings.';
+    }
+  }
+
+  /// Gets a user-friendly message for exceeded retry attempts.
+  String _getRetryExceededMessage(String permissionType) {
+    switch (permissionType.toLowerCase()) {
+      case 'camera':
+        return 'Camera access is required to use this feature. Please try again or go to Settings to enable it.';
+      case 'microphone':
+        return 'Microphone access is required to use this feature. Please try again or go to Settings to enable it.';
+      default:
+        return '$permissionType permission is required. Please enable it in app settings.';
+    }
+  }
+
+  /// Gets a user-friendly message for platform errors.
+  String _getPlatformErrorMessage(String permissionType) {
+    return 'Failed to request $permissionType permission. Please try restarting the app.';
+  }
+
+  /// Gets a user-friendly rationale message.
+  Future<String> getPermissionRationale(String permissionType) async {
+    switch (permissionType.toLowerCase()) {
+      case 'camera':
+        return 'SignSync needs camera access to recognize ASL signs and detect objects. This helps translate sign language in real-time.';
+      case 'microphone':
+        return 'SignSync needs microphone access to detect sounds and provide audio feedback. This enhances the accessibility experience.';
+      default:
+        return 'SignSync needs this permission to provide its features.';
+    }
   }
 }
 

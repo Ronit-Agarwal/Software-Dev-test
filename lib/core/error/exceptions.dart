@@ -85,6 +85,33 @@ class InferenceException extends SignSyncException {
         );
 }
 
+/// Exception thrown when ML model loading fails.
+class ModelLoadException extends SignSyncException {
+  final String? modelPath;
+  final String? modelType;
+
+  const ModelLoadException(
+    String message, {
+    this.modelPath,
+    this.modelType,
+    String? code,
+    dynamic originalError,
+    StackTrace? stackTrace,
+  }) : super(
+          message,
+          code: code ?? 'MODEL_LOAD_ERROR',
+          originalError: originalError,
+          stackTrace: stackTrace,
+        );
+
+  @override
+  String toString() {
+    final type = modelType != null ? '[$modelType] ' : '';
+    final path = modelPath != null ? ' ($modelPath)' : '';
+    return 'ModelLoadException $type$message$path';
+  }
+}
+
 /// Exception thrown when an API call fails.
 class ApiException extends SignSyncException {
   final int? statusCode;
