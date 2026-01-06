@@ -8,6 +8,11 @@ class AppConstants {
   static const String appVersion = '1.0.0';
   static const String appBuildNumber = '1';
 
+  // Legal
+  static const String privacyPolicyUrl = 'https://signsync.app/legal/privacy';
+  static const String termsOfServiceUrl = 'https://signsync.app/legal/terms';
+  static const String supportEmail = 'support@signsync.app';
+
   // API
   static const String apiBaseUrl = 'https://api.signsync.app/v1';
   static const Duration apiTimeout = Duration(seconds: 30);

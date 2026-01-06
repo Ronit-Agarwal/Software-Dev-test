@@ -1,0 +1,9 @@
+# Copy to android/key.properties (DO NOT COMMIT) and fill in values.
+#
+# storeFile can be absolute or relative to the android/ directory.
+# Recommended: storeFile=../keystore/signsync-release.jks
+
+storePassword=CHANGE_ME
+keyPassword=CHANGE_ME
+keyAlias=signsync
+storeFile=../keystore/signsync-release.jks
