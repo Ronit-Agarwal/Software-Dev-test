@@ -39,7 +39,7 @@ local.properties
 *.gradle
 /captures/
 .output/
-android/app/src/main/kotlin/
+/android/app/src/main/kotlin/
 
 # iOS
 /ios/Pods/
@@ -68,3 +68,6 @@ test_coverage/
 **/secrets/
 *.keystore
 *.jks
+
+# Gradle wrapper jar (optional - usually included in git)
+!gradle/wrapper/gradle-wrapper.jar
