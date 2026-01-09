@@ -228,10 +228,11 @@ dev_dependencies:
   mocktail: ^1.0.0              # Modern mocking library
   golden_toolkit: ^0.15.0        # Widget screenshot testing
   flutter_test_gen: ^0.6.0       # Test generation
-  flutter_coverage_badge: ^0.1.2  # Coverage badge
   test_cov_console: ^0.2.1       # Console coverage reporting
   patrol: ^3.0.0                # E2E testing framework
 ```
+
+Note: Coverage badges are generated using `coverage_badge_generator` as a global package (via `flutter pub global activate coverage_badge_generator`) rather than as a dev dependency.
 
 ## Coverage Targets
 
