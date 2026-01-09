@@ -64,6 +64,10 @@
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize"
             android:requestLegacyExternalStorage="true">
+
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
             
             <!-- Deep linking -->
             <intent-filter android:autoVerify="true">
@@ -80,6 +84,10 @@
                     android:host="signsync.app" />
             </intent-filter>
         </activity>
+
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
 
         <!-- Firebase Messaging Service (placeholder) -->
         <service
