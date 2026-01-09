@@ -1,4 +1,5 @@
 // SignSync Test Suite
+import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:signsync/models/asl_sign.dart';
 import 'package:signsync/models/detected_object.dart';
@@ -125,5 +126,3 @@ void main() {
     });
   });
 }
-
-import 'dart:ui';

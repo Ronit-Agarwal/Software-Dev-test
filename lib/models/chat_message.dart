@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:equatable/equatable.dart';
 
 /// Represents a chat message in the AI chat feature.

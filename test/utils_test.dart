@@ -1,4 +1,5 @@
 // Unit tests for SignSync utilities
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:signsync/utils/constants.dart';
 import 'package:signsync/utils/extensions.dart';
@@ -154,7 +155,5 @@ void main() {
       expect(AppConstants.minTouchTarget, 44.0);
       expect(AppConstants.recommendedTouchTarget, 48.0);
     });
-  }
+  });
 }
-
-import 'package:flutter/material.dart';
