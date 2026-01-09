@@ -99,7 +99,7 @@ dev_dependencies:
   mocktail: ^1.0.0
   golden_toolkit: ^0.15.0
   flutter_test_gen: ^0.6.0
-  flutter_coverage_badge: ^0.1.2
+  flutter_coverage_badge: ^0.0.1+1
   test_cov_console: ^0.2.1
   patrol: ^3.0.0
 
