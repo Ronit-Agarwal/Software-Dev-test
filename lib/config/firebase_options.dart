@@ -11,6 +11,7 @@
 /// 5. Replace this file with the generated firebase_options.dart
 
 import 'package:flutter/foundation.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 /// Default Firebase options for each platform.
 ///
@@ -54,5 +55,3 @@ class DefaultFirebaseOptions {
     iosBundleId: 'com.signsync.app',
   );
 }
-
-import 'package:firebase_core/firebase_core.dart';

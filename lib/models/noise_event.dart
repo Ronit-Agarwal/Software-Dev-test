@@ -100,7 +100,7 @@ enum NoiseType {
   knock('Knocking', Icons.doorbell),
   alarm('Alarm', Icons.alarm),
   siren('Siren', Icons.speaker),
-  phoneRing('Phone Ring', Icons.phone'),
+  phoneRing('Phone Ring', Icons.phone),
   babyCrying('Baby Crying', Icons.child_care),
   glassBreak('Glass Break', Icons.window),
   smokeDetector('Smoke Detector', Icons.warning),

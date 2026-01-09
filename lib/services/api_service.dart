@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:signsync/core/error/exceptions.dart';
 import 'package:signsync/core/logging/logger_service.dart';
@@ -47,7 +48,7 @@ class ApiService with ChangeNotifier {
       );
     } catch (e, stack) {
       LoggerService.error('GET request failed', error: e, stack: stack);
-      rethrow ApiException.fromError(e);
+      throw ApiException.fromError(e);
     }
   }
 
@@ -69,7 +70,7 @@ class ApiService with ChangeNotifier {
       );
     } catch (e, stack) {
       LoggerService.error('POST request failed', error: e, stack: stack);
-      rethrow ApiException.fromError(e);
+      throw ApiException.fromError(e);
     }
   }
 
