@@ -2,9 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:signsync/services/permissions_service.dart';
 import 'package:mockito/mockito.dart';
-import 'package:mockito/annotations.dart';
+import 'permission_retry_test.mocks.dart';
 
-@GenerateMocks([PermissionsService])
 void main() {
   group('PermissionsService Retry Logic', () {
     late PermissionsService permissionsService;
